@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-sans: 'Space Grotesk', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+
+  /* Backgrounds */
+  --color-bg-base: #151621;
+  --color-bg-surface: #13131F;
+  --color-bg-elevated: ;
+  --color-bg-sidebar: #151621;
+  --color-bg-main: #151621;
+  --color-bg-active: #202132;
+  --color-bg-row-hover: #2A2B40;
+  --color-bg-hover: #393A52;
+  --color-bg-hover-strong: #454760;
+  --color-bg-avatar: #323962;
+  --color-bg-chip: #2E2F43;
+  --color-hero-top: #1D1D34;
+  --color-hero-glow: #202241;
+
+  /* Text */
+  --color-text-primary: #EEEFFC;
+  --color-text-secondary: #A4ADE2;
+  --color-text-muted: #8D95B2;
+
+  /* Accent */
+  --color-accent: #5145F2;
+  --color-accent-muted: ;
+
+  /* Borders */
+  --color-border: #282A53;
+  --color-border-panel: #282A53;
+  --color-border-active: #282A53;
+  --color-border-checkbox: #625F93;
+  --color-divider: #D4D1D6;
+  --border-width: ;
+
+  /* Status */
+  --color-status-positive: #7BB15B;
+  --color-status-progress: #CC9F2C;
+  --color-status-error: #D65C37;
+  --color-status-neutral: #8D95B2;
+
+  /* Geometry */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* Motion */
+  --duration-fast: ;
+  --duration-normal: ;
+}
+
+@keyframes dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    min-height: 100vh;
+    background-color: var(--color-bg-main);
+    color: var(--color-text-primary);
+  }
+}
+
+.hero-glow {
+  background:
+    radial-gradient(
+      ellipse 130% 100% at 50% 100%,
+      var(--color-hero-glow) 0%,
+      var(--color-hero-top) 55%,
+      transparent 100%
+    ),
+    var(--color-bg-base);
+}

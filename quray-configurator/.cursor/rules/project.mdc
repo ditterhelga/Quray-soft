@@ -1,0 +1,27 @@
+---
+description: Quray project rules
+alwaysApply: true
+---
+
+Stack: React 19, TypeScript, Vite, Tailwind CSS v4. Not Next.js.
+
+Tailwind v4: all theme tokens live in @theme {} in tokens.css. No tailwind.config.ts.
+Never hardcode hex colors, font names, px font sizes, or border radii in components.
+Use only Tailwind utility classes mapped to CSS variables.
+
+Components: functional, arrow function syntax, named exports only.
+Prefer interfaces over types. No enums — use string union types.
+No inline styles. No style={{}} attributes.
+Check src/components/ui/ before creating new primitives.
+
+Responsive: mobile-first, use best judgment.
+
+## Styleguide upkeep
+
+The /styleguide page (src/pages/Styleguide.tsx) is a living design system reference and a portfolio artifact. Keep it in sync:
+
+- When you create or modify a component in src/components/, update its section in Styleguide.tsx in the SAME change — show the component in all its meaningful states (default, hover, active, disabled, error, etc.).
+- When you add a new design token in tokens.css, add its swatch/sample to the matching Foundations section (Colors, Typography, Spacing, Radii).
+- When a component gains a new state or variant, add that state to its styleguide section.
+- Always render the REAL component, never a copy. Import from src/components/.
+- After updating, briefly note in your reply what you added to the styleguide.
