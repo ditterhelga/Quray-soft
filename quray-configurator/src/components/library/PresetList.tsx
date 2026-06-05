@@ -11,19 +11,28 @@ import {
 import { PresetTableSortHeader } from '@/components/library/PresetTableSortHeader'
 import { PresetRow } from '@/components/library/PresetRow'
 import { SetRow } from '@/components/library/SetRow'
-import { PRESET_TABLE_HEADER, PRESET_TABLE_HEADER_EXPLORE } from '@/components/library/presetTableLayout'
+import {
+  PRESET_TABLE_HEADER,
+  PRESET_TABLE_HEADER_EXPLORE,
+  PRESET_TABLE_HEADER_SETS,
+  PRESET_TABLE_STATUS_HEADER_CELL,
+} from '@/components/library/presetTableLayout'
 import type { SortKey } from '@/utils/sortPresets'
 import type { Preset, Set as LibrarySet } from '@/types'
 
 type SetListProps = {
   sets?: LibrarySet[]
   allPresets?: Preset[]
-  expandedSetId?: string | null
+  expandedSetIds?: Set<string>
   onToggleExpand?: (setId: string) => void
+  onReorderPresets?: (setId: string, presetIds: string[]) => void
   renamingSetId?: string | null
   onSetAction?: (actionId: string, setId: string) => void
   onSetRenameSave?: (setId: string, name: string) => void
   onSetRenameCancel?: () => void
+  onToggleSetFavourite?: (setId: string) => void
+  onSetPresetAction?: (actionId: string, setId: string, presetId: string) => void
+  onAddPresetToSet?: (setId: string) => void
 }
 
 type PresetListSharedProps = {
@@ -40,7 +49,7 @@ type PresetListSharedProps = {
   onSortChange: (sortKey: SortKey) => void
   bulkSelectionEnabled?: boolean
   selectedIds: Set<string>
-  onToggleSelect: (presetId: string) => void
+  onToggleSelect: (id: string) => void
   onSelectAll: () => void
   onClearSelection: () => void
   onBulkSendToQuray: () => void
@@ -52,10 +61,12 @@ type PresetListProps = PresetListSharedProps
 type PresetListStickyHeaderProps = PresetListSharedProps & {
   view: ListView
   onViewChange: (view: ListView) => void
+  onNewSet?: () => void
 }
 
 export function PresetListStickyHeader({
   presets,
+  sets = [],
   variant = 'library',
   sortKey,
   onSortChange,
@@ -67,27 +78,59 @@ export function PresetListStickyHeader({
   onBulkExport,
   view,
   onViewChange,
+  onNewSet,
 }: PresetListStickyHeaderProps) {
   const selectedCount = selectedIds.size
   const tableHeaderClassName =
     variant === 'explore' ? PRESET_TABLE_HEADER_EXPLORE : PRESET_TABLE_HEADER
+  const listCount = view === 'sets' ? sets.length : presets.length
 
-  if (view !== 'presets') {
+  if (view === 'sets') {
     return (
-      <div className={presetListToolbarClassName()}>
-        <LibraryViewToggle value={view} onChange={onViewChange} />
-      </div>
+      <>
+        <div className={presetListToolbarClassName()}>
+          <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
+          {bulkSelectionEnabled && (
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalCount={listCount}
+              onSelectAll={onSelectAll}
+              onClear={onClearSelection}
+              onSendToQuray={onBulkSendToQuray}
+              onExport={onBulkExport}
+            />
+          )}
+        </div>
+        <div className={presetListTableHeaderClassName()}>
+          <div className={PRESET_TABLE_HEADER_SETS}>
+            <PresetTableSortHeader
+              label="Name"
+              sortKey="name"
+              activeSortKey={sortKey}
+              onSort={onSortChange}
+            />
+            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+            <PresetTableSortHeader
+              label="Last updated"
+              sortKey="lastUpdated"
+              activeSortKey={sortKey}
+              onSort={onSortChange}
+            />
+            <span aria-hidden="true" />
+          </div>
+        </div>
+      </>
     )
   }
 
   return (
     <>
       <div className={presetListToolbarClassName()}>
-        <LibraryViewToggle value={view} onChange={onViewChange} />
+        <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
         {bulkSelectionEnabled && (
           <BulkActionBar
             selectedCount={selectedCount}
-            totalCount={presets.length}
+            totalCount={listCount}
             onSelectAll={onSelectAll}
             onClear={onClearSelection}
             onSendToQuray={onBulkSendToQuray}
@@ -103,7 +146,10 @@ export function PresetListStickyHeader({
             activeSortKey={sortKey}
             onSort={onSortChange}
           />
-          {variant === 'library' && <span>Status</span>}
+          {variant === 'library' && (
+            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+          )}
+          {variant === 'library' && <span aria-hidden="true" />}
           <span>Output</span>
           <PresetTableSortHeader
             label="Zones"
@@ -143,12 +189,16 @@ export function PresetListBody({
   onToggleSelect,
   sets = [],
   allPresets = [],
-  expandedSetId = null,
+  expandedSetIds = new Set(),
   onToggleExpand = () => undefined,
+  onReorderPresets = () => undefined,
   renamingSetId = null,
   onSetAction = () => undefined,
   onSetRenameSave = () => undefined,
   onSetRenameCancel = () => undefined,
+  onToggleSetFavourite = () => undefined,
+  onSetPresetAction = () => undefined,
+  onAddPresetToSet = () => undefined,
   view,
 }: PresetListBodyProps) {
   const bulkActive = bulkSelectionEnabled && selectedIds.size > 0
@@ -174,12 +224,22 @@ export function PresetListBody({
               key={set.id}
               set={set}
               presetsById={presetsById}
-              isExpanded={expandedSetId === set.id}
+              isExpanded={expandedSetIds.has(set.id)}
               onToggleExpand={() => onToggleExpand(set.id)}
+              isFavourite={favourites[set.id] ?? false}
+              onToggleFavourite={() => onToggleSetFavourite(set.id)}
               isRenaming={renamingSetId === set.id}
               onRenameSave={(name) => onSetRenameSave(set.id, name)}
               onRenameCancel={onSetRenameCancel}
               onSetAction={onSetAction}
+              onPresetRowClick={onRowClick}
+              onSetPresetAction={onSetPresetAction}
+              onAddPresetToSet={onAddPresetToSet}
+              onReorderPresets={onReorderPresets}
+              bulkSelectionEnabled={bulkSelectionEnabled}
+              bulkActive={bulkActive}
+              isSelected={selectedIds.has(set.id)}
+              onToggleSelect={() => onToggleSelect(set.id)}
             />
           ))}
         </div>

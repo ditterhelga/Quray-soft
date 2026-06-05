@@ -24,6 +24,8 @@ import {
   type LibraryFilters,
 } from '@/components/library/filterOptions'
 import { BulkActionBar } from '@/components/library/BulkActionBar'
+import { AddPresetPickerModal } from '@/components/library/AddPresetPickerModal'
+import { SetPickerModal } from '@/components/library/SetPickerModal'
 import { PresetKebabMenu } from '@/components/library/PresetKebabMenu'
 import { SetKebabMenu } from '@/components/library/SetKebabMenu'
 import { SetRow } from '@/components/library/SetRow'
@@ -38,10 +40,17 @@ import {
   presetRowFavouriteButtonClassName,
 } from '@/components/library/presetRowActions'
 import { PresetTableSortHeader } from '@/components/library/PresetTableSortHeader'
-import { PRESET_TABLE_HEADER, PRESET_TABLE_HEADER_EXPLORE, PRESET_TABLE_MIN_WIDTH_CLASS } from '@/components/library/presetTableLayout'
+import {
+  PRESET_TABLE_HEADER,
+  PRESET_TABLE_HEADER_EXPLORE,
+  PRESET_TABLE_HEADER_SETS,
+  PRESET_TABLE_MIN_WIDTH_CLASS,
+  PRESET_TABLE_STATUS_HEADER_CELL,
+} from '@/components/library/presetTableLayout'
 import { PRESETS } from '@/data/presets'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
 import { SETS } from '@/data/sets'
+import { getSetPresetIds } from '@/utils/setMembers'
 import {
   OutputChip,
   ZoneBadge,
@@ -89,6 +98,8 @@ const TOC = [
       { id: 'bulk-selection', label: 'Bulk Selection' },
       { id: 'preset-row', label: 'Preset Row' },
       { id: 'set-row', label: 'Set Row' },
+      { id: 'set-picker', label: 'Set Picker' },
+      { id: 'add-preset-picker', label: 'Add Preset Picker' },
       { id: 'nav-item', label: 'Nav Item' },
       { id: 'account-row', label: 'Account Row' },
     ],
@@ -343,6 +354,43 @@ function StyleguideSearchFieldDemo() {
   )
 }
 
+function StyleguideSetPickerDemo() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open set picker</Button>
+      <SetPickerModal
+        open={open}
+        title="Add to set"
+        sets={SETS}
+        onClose={() => setOpen(false)}
+        onSelectSet={() => undefined}
+        onCreateSet={() => undefined}
+      />
+    </>
+  )
+}
+
+function StyleguideAddPresetPickerDemo() {
+  const [open, setOpen] = useState(false)
+  const demoSet = SETS[1]
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open add preset picker</Button>
+      <AddPresetPickerModal
+        open={open}
+        presets={PRESETS}
+        setPresetIds={getSetPresetIds(demoSet)}
+        onClose={() => setOpen(false)}
+        onAdd={() => undefined}
+        onCreatePreset={() => undefined}
+      />
+    </>
+  )
+}
+
 function StyleguideFiltersRowDemo() {
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS)
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
@@ -371,7 +419,6 @@ function StyleguideFiltersRowDemo() {
     <div>
       <LibraryFiltersRow
         activeTab="library"
-        view="presets"
         filters={filters}
         onFilterChange={(key, selected) =>
           setFilters((current) => ({ ...current, [key]: selected }))
@@ -411,8 +458,8 @@ function StyleguideViewToggleDemo() {
         <LibraryViewToggle value={view} onChange={setView} />
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-xs text-text-muted">Sets active</span>
-        <LibraryViewToggle value="sets" onChange={() => undefined} />
+        <span className="text-xs text-text-muted">Sets active (+ New set link)</span>
+        <LibraryViewToggle value="sets" onChange={() => undefined} onNewSet={() => undefined} />
       </div>
     </div>
   )
@@ -850,7 +897,8 @@ export function Styleguide() {
             <p className="mt-6 text-sm font-light text-text-muted">
               Segmented control · 48px outer rounded-lg · 6px padding · gap-1 between
               segments · active segment bg-accent rounded-md (4px) · inactive hover
-              bg-hover.
+              bg-hover · + New set text link (text-secondary, text-base, medium) appears to
+              the right when Sets is active.
             </p>
           </Section>
 
@@ -911,7 +959,8 @@ export function Styleguide() {
                       activeSortKey="lastUpdated"
                       onSort={() => undefined}
                     />
-                    <span>Status</span>
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+                    <span aria-hidden="true" />
                     <span>Output</span>
                     <PresetTableSortHeader
                       label="Zones"
@@ -943,6 +992,43 @@ export function Styleguide() {
                     preset={PRESETS[0]}
                     isFavourite={PRESETS[0].isFavourite}
                     onToggleFavourite={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Without Zones (Sets inner rows)
+                </p>
+                <StyleguideWidePreview>
+                  <PresetRow
+                    preset={PRESETS[0]}
+                    isFavourite={false}
+                    onToggleFavourite={() => undefined}
+                    showZones={false}
+                    showFavourite={false}
+                    dragHandle
+                  />
+                </StyleguideWidePreview>
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  `showZones={false}` · `showFavourite={false}` · dnd-kit drag handle ·
+                  placeholder opacity while dragging.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Drag placeholder
+                </p>
+                <StyleguideWidePreview>
+                  <PresetRow
+                    preset={PRESETS[0]}
+                    isFavourite={false}
+                    onToggleFavourite={() => undefined}
+                    showZones={false}
+                    showFavourite={false}
+                    dragHandle
+                    isDragPlaceholder
                   />
                 </StyleguideWidePreview>
               </div>
@@ -1139,14 +1225,37 @@ export function Styleguide() {
             <div className="space-y-10">
               <div>
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Table headers (Sets view)
+                </p>
+                <StyleguideWidePreview>
+                  <div className={PRESET_TABLE_HEADER_SETS}>
+                    <span>Name</span>
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+                    <span>Last updated</span>
+                    <span aria-hidden="true" />
+                  </div>
+                </StyleguideWidePreview>
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  Three data columns — Name, Status (aggregated from members), Last updated · no
+                  Output or Zones.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
                   Collapsed
                 </p>
-                <StyleguideWidePreview className="max-w-5xl">
+                <StyleguideWidePreview>
                   <SetRow
                     set={SETS[0]}
                     presetsById={new Map(PRESETS.map((preset) => [preset.id, preset]))}
                     isExpanded={false}
                     onToggleExpand={() => undefined}
+                    isFavourite={false}
+                    onToggleFavourite={() => undefined}
+                    bulkSelectionEnabled
+                    bulkActive
+                    isSelected
                   />
                 </StyleguideWidePreview>
               </div>
@@ -1155,18 +1264,21 @@ export function Styleguide() {
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
                   Expanded
                 </p>
-                <StyleguideWidePreview className="max-w-5xl">
+                <StyleguideWidePreview>
                   <SetRow
                     set={SETS[1]}
                     presetsById={new Map(PRESETS.map((preset) => [preset.id, preset]))}
                     isExpanded
                     onToggleExpand={() => undefined}
+                    isFavourite={false}
+                    onToggleFavourite={() => undefined}
                     forceHover
                   />
                 </StyleguideWidePreview>
                 <p className="mt-4 text-sm font-light text-text-muted">
-                  Ordered preset slots with position, drag handle (visual only), sync dot, and
-                  Add preset action.
+                  Inner rows use nested PresetRow (bare, no card) with showZones=false, no star,
+                  Remove from set / Move to set / Open in editor kebab, @dnd-kit sortable with
+                  DragOverlay and placeholder dimming.
                 </p>
               </div>
 
@@ -1174,12 +1286,14 @@ export function Styleguide() {
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
                   Inline rename
                 </p>
-                <StyleguideWidePreview className="max-w-5xl">
+                <StyleguideWidePreview>
                   <SetRow
                     set={SETS[0]}
                     presetsById={new Map(PRESETS.map((preset) => [preset.id, preset]))}
                     isExpanded={false}
                     onToggleExpand={() => undefined}
+                    isFavourite={false}
+                    onToggleFavourite={() => undefined}
                     isRenaming
                     onRenameSave={() => undefined}
                     onRenameCancel={() => undefined}
@@ -1197,9 +1311,33 @@ export function Styleguide() {
               </div>
             </div>
             <p className="mt-6 text-sm font-light text-text-muted">
-              Row click toggles accordion · status chip + relative time on the right · open
-              editor icon on hover · no bulk selection.
+              Mirrors PresetRow grid (4 columns) · expand caret after set name · bulk
+              checkbox in left slot · star on set rows only · set status aggregated from member
+              sync states · inner presets show per-member status, not global · bare rows with
+              dividers, drag-reorder · + Add preset opens Add Preset Picker.
             </p>
+          </Section>
+
+          <Section id="set-picker" title="Set Picker">
+            <div className="space-y-6">
+              <StyleguideSetPickerDemo />
+              <p className="text-sm font-light text-text-muted">
+                Centered command-palette modal · search filters sets by name · single-select list ·
+                Create new set action at top · used by Presets-tab Add to set and inner-row Move to
+                set (current set excluded).
+              </p>
+            </div>
+          </Section>
+
+          <Section id="add-preset-picker" title="Add Preset Picker">
+            <div className="space-y-6">
+              <StyleguideAddPresetPickerDemo />
+              <p className="text-sm font-light text-text-muted">
+                Centered command-palette modal · multi-select with checkboxes · presets already in
+                the set shown checked and disabled with Already in set · Create new preset at top ·
+                footer shows selection count and Add button.
+              </p>
+            </div>
           </Section>
 
           <Section id="nav-item" title="Nav Item">
@@ -1302,7 +1440,8 @@ export function Styleguide() {
                   <div className={presetListTableHeaderClassName()}>
                     <div className={PRESET_TABLE_HEADER}>
                       <span>Name</span>
-                      <span>Status</span>
+                      <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+                      <span aria-hidden="true" />
                       <span>Output</span>
                       <span>Zones</span>
                       <span>Last updated</span>

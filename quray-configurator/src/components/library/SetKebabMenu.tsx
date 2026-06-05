@@ -1,8 +1,10 @@
 import {
-  ArrowSquareOut,
   Copy,
+  DownloadSimple,
+  FolderPlus,
   TextAa,
   Trash,
+  UploadSimple,
   type Icon,
 } from '@phosphor-icons/react'
 import {
@@ -29,9 +31,11 @@ type SetKebabMenuItem = {
 }
 
 const SET_KEBAB_MENU_ITEMS: SetKebabMenuItem[] = [
-  { id: 'open-editor', label: 'Open set editor', icon: ArrowSquareOut },
-  { id: 'duplicate', label: 'Duplicate', icon: Copy },
   { id: 'rename', label: 'Rename', icon: TextAa },
+  { id: 'duplicate', label: 'Duplicate', icon: Copy },
+  { id: 'add-presets', label: 'Add presets', icon: FolderPlus },
+  { id: 'send-to-quray', label: 'Send to Quray', icon: UploadSimple },
+  { id: 'export', label: 'Export', icon: DownloadSimple },
   { id: 'delete', label: 'Delete', icon: Trash, destructive: true, dividerBefore: true },
 ]
 

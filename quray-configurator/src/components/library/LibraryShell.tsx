@@ -8,7 +8,6 @@ import {
   LIBRARY_FILTER_KEYS,
 } from '@/components/library/filterOptions'
 import { Header } from '@/components/layout/Header'
-import type { ListView } from '@/components/library/LibraryViewToggle'
 import type { FilterAnchor } from '@/components/library/FilterDropdown'
 import type { FilterKey, LibraryFilters } from '@/components/library/filterOptions'
 
@@ -19,7 +18,6 @@ type LibraryShellProps = {
   children?: ReactNode
   activeTab: LibraryTab
   onActiveTabChange: (tab: LibraryTab) => void
-  view: ListView
   filters: LibraryFilters
   onFilterChange: (key: FilterKey, selected: string[]) => void
   openFilter: FilterKey | null
@@ -30,6 +28,7 @@ type LibraryShellProps = {
   onlyFavourites: boolean
   onOnlyFavouritesChange: (value: boolean) => void
   onClearAllFilters: () => void
+  onNewPreset?: () => void
 }
 
 /**
@@ -53,7 +52,6 @@ export function LibraryShell({
   children,
   activeTab,
   onActiveTabChange,
-  view,
   filters,
   onFilterChange,
   openFilter,
@@ -64,11 +62,10 @@ export function LibraryShell({
   onlyFavourites,
   onOnlyFavouritesChange,
   onClearAllFilters,
+  onNewPreset,
 }: LibraryShellProps) {
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
-  const showPresetFilters = view === 'presets'
-  const hasFilterPills =
-    showPresetFilters && hasActiveFilters(filters, onlyFavourites, filterKeys)
+  const hasFilterPills = hasActiveFilters(filters, onlyFavourites, filterKeys)
 
   return (
     <div className="bg-bg-base">
@@ -80,10 +77,9 @@ export function LibraryShell({
       ──────────────────────────────────────────────────────────────────────── */}
       <div className="hero-glow pb-8">
         <Header />
-        <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} />
+        <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} onNewPreset={onNewPreset} />
         <LibraryFiltersRow
           activeTab={activeTab}
-          view={view}
           filters={filters}
           onFilterChange={onFilterChange}
           openFilter={openFilter}

@@ -1,8 +1,10 @@
 import {
   ArrowSquareOut,
+  ArrowsLeftRight,
   Copy,
   DownloadSimple,
   FolderPlus,
+  Minus,
   Plus,
   TextAa,
   Trash,
@@ -48,7 +50,13 @@ const EXPLORE_KEBAB_MENU_ITEMS: PresetKebabMenuItem[] = [
   { id: 'export', label: 'Export', icon: DownloadSimple },
 ]
 
-export type PresetKebabMenuVariant = 'library' | 'explore'
+const NESTED_SET_KEBAB_MENU_ITEMS: PresetKebabMenuItem[] = [
+  { id: 'remove-from-set', label: 'Remove from set', icon: Minus },
+  { id: 'move-to-set', label: 'Move to set', icon: ArrowsLeftRight },
+  { id: 'open', label: 'Open in editor', icon: ArrowSquareOut, dividerBefore: true },
+]
+
+export type PresetKebabMenuVariant = 'library' | 'explore' | 'nested-set'
 
 const PRESET_KEBAB_MENU_WIDTH_PX = 220
 
@@ -129,7 +137,12 @@ export function PresetKebabMenuPanel({
     console.log('Preset action', actionId, presetId)
   }
 
-  const items = variant === 'explore' ? EXPLORE_KEBAB_MENU_ITEMS : PRESET_KEBAB_MENU_ITEMS
+  const items =
+    variant === 'explore'
+      ? EXPLORE_KEBAB_MENU_ITEMS
+      : variant === 'nested-set'
+        ? NESTED_SET_KEBAB_MENU_ITEMS
+        : PRESET_KEBAB_MENU_ITEMS
 
   return (
     <div
@@ -337,4 +350,4 @@ export function PresetKebabMenu({
   )
 }
 
-export { EXPLORE_KEBAB_MENU_ITEMS, PRESET_KEBAB_MENU_ITEMS }
+export { EXPLORE_KEBAB_MENU_ITEMS, NESTED_SET_KEBAB_MENU_ITEMS, PRESET_KEBAB_MENU_ITEMS }

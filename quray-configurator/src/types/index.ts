@@ -18,11 +18,15 @@ export interface Preset {
 
 export type SetSyncStatus = 'synced' | 'modified' | 'not-synced'
 
+export interface SetMember {
+  presetId: string
+  syncStatus: SetSyncStatus
+}
+
 export interface Set {
   id: string
   name: string
-  presetIds: string[]        // ordered — order matters for live performance
-  syncStatus: SetSyncStatus
+  members: SetMember[]       // ordered — order matters for live performance
   lastUpdated: Date
   notes?: string
 }

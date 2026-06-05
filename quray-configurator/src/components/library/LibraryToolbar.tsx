@@ -7,6 +7,7 @@ export type LibraryTab = 'library' | 'explore'
 type LibraryToolbarProps = {
   activeTab: LibraryTab
   onActiveTabChange: (tab: LibraryTab) => void
+  onNewPreset?: () => void
 }
 
 export function libraryToolbarClassName() {
@@ -25,7 +26,11 @@ export function libraryToolbarImportClassName() {
   return 'inline-flex h-12 shrink-0 cursor-pointer items-center gap-2 text-lg font-light font-[300] leading-none text-text-secondary transition-colors duration-[120ms] hover:text-text-primary [font-weight:300]'
 }
 
-export function LibraryToolbar({ activeTab, onActiveTabChange }: LibraryToolbarProps) {
+export function LibraryToolbar({
+  activeTab,
+  onActiveTabChange,
+  onNewPreset,
+}: LibraryToolbarProps) {
   return (
     <div className={libraryToolbarClassName()}>
       <div className={libraryToolbarRowClassName()}>
@@ -54,6 +59,7 @@ export function LibraryToolbar({ activeTab, onActiveTabChange }: LibraryToolbarP
           <Button
             icon={Plus}
             className="font-light leading-none font-[300] [font-weight:300]"
+            onClick={onNewPreset}
           >
             New preset
           </Button>

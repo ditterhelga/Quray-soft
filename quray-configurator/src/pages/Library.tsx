@@ -12,18 +12,31 @@ import {
   type FilterKey,
   type LibraryFilters,
 } from '@/components/library/filterOptions'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Toast } from '@/components/ui/Toast'
+import { AddPresetPickerModal } from '@/components/library/AddPresetPickerModal'
+import { SetPickerModal } from '@/components/library/SetPickerModal'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
 import { PRESETS } from '@/data/presets'
 import { SETS } from '@/data/sets'
 import { filterSets, duplicateSetNameToastMessage } from '@/utils/filterSets'
-import { duplicatePreset } from '@/utils/presetActions'
+import { duplicatePreset, createBlankPreset } from '@/utils/presetActions'
 import { filterPresets } from '@/utils/filterPresets'
 import {
   duplicateNameToastMessage,
   resolvePresetName,
 } from '@/utils/presetNames'
-import { duplicateSet } from '@/utils/setActions'
+import { duplicateSet, createEmptySet } from '@/utils/setActions'
+import {
+  appendSetMembers,
+  createSetMember,
+  getSetMember,
+  getSetPresetIds,
+  presetReferencedInSets,
+  removeSetMember,
+  reorderSetMembers,
+  setHasPreset,
+} from '@/utils/setMembers'
 import {
   DEFAULT_PRESET_SORT,
   nextPresetSort,
@@ -31,6 +44,17 @@ import {
   type SortDirection,
   type SortKey,
 } from '@/utils/sortPresets'
+
+type ToastState = {
+  message: string
+  actionLabel?: string
+  onAction?: () => void
+}
+
+type SetPickerState =
+  | { mode: 'add-to-set'; presetId: string }
+  | { mode: 'move-to-set'; presetId: string; sourceSetId: string }
+  | null
 
 export function Library() {
   const [activeTab, setActiveTab] = useState<LibraryTab>('library')
@@ -48,19 +72,24 @@ export function Library() {
     DEFAULT_PRESET_SORT.sortDirection,
   )
   const [favourites, setFavourites] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(
-      [...PRESETS, ...EXPLORE_PRESETS].map((preset) => [preset.id, preset.isFavourite]),
-    ),
+    Object.fromEntries([
+      ...PRESETS.map((preset) => [preset.id, preset.isFavourite]),
+      ...EXPLORE_PRESETS.map((preset) => [preset.id, preset.isFavourite]),
+      ...SETS.map((set) => [set.id, false]),
+    ]),
   )
   const [renamingPresetId, setRenamingPresetId] = useState<string | null>(null)
   const [renamingSetId, setRenamingSetId] = useState<string | null>(null)
-  const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [expandedSetIds, setExpandedSetIds] = useState<Set<string>>(() => new Set())
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [deleteConfirmPresetId, setDeleteConfirmPresetId] = useState<string | null>(null)
+  const [setPicker, setSetPicker] = useState<SetPickerState>(null)
+  const [addPresetPickerSetId, setAddPresetPickerSetId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [view, setView] = useState<ListView>('presets')
 
   const dismissToast = useCallback(() => {
-    setToastMessage(null)
+    setToast(null)
   }, [])
 
   const isExploreTab = activeTab === 'explore'
@@ -72,7 +101,7 @@ export function Library() {
   const visiblePresets = useMemo(() => {
     const filtered = filterPresets(presetSource, {
       filters,
-      searchQuery,
+      searchQuery: isSetsView ? '' : searchQuery,
       onlyFavourites,
       favourites,
       searchMode,
@@ -88,11 +117,17 @@ export function Library() {
     searchMode,
     sortKey,
     sortDirection,
+    isSetsView,
   ])
 
   const visibleSets = useMemo(
-    () => filterSets(sets, searchQuery),
-    [sets, searchQuery],
+    () =>
+      filterSets(sets, {
+        searchQuery,
+        onlyFavourites,
+        favourites,
+      }),
+    [sets, searchQuery, onlyFavourites, favourites],
   )
 
   function handleActiveTabChange(nextTab: LibraryTab) {
@@ -107,7 +142,7 @@ export function Library() {
     setOpenFilter(null)
     setOpenFilterAnchor(null)
     setSelectedIds(new Set())
-    setExpandedSetId(null)
+    setExpandedSetIds(new Set())
   }
 
   function handleViewChange(nextView: ListView) {
@@ -117,9 +152,9 @@ export function Library() {
 
     if (nextView === 'sets') {
       setSearchQuery('')
-      setExpandedSetId(null)
     }
 
+    setSelectedIds(new Set())
     setView(nextView)
   }
 
@@ -148,10 +183,10 @@ export function Library() {
     setSortDirection(nextSort.sortDirection)
   }
 
-  function toggleFavourite(presetId: string) {
+  function toggleFavourite(id: string) {
     setFavourites((current) => ({
       ...current,
-      [presetId]: !(current[presetId] ?? false),
+      [id]: !(current[id] ?? false),
     }))
   }
 
@@ -165,6 +200,33 @@ export function Library() {
       const existingNames = new Set(current.map((preset) => preset.name))
       return [...current, duplicatePreset(source, existingNames)]
     })
+  }
+
+  function handleDelete(presetId: string) {
+    setPresets((current) => current.filter((preset) => preset.id !== presetId))
+
+    setSets((current) =>
+      current.map((set) => ({
+        ...set,
+        members: removeSetMember(set.members, presetId),
+      })),
+    )
+
+    setSelectedIds((current) => {
+      if (!current.has(presetId)) {
+        return current
+      }
+
+      const next = new Set(current)
+      next.delete(presetId)
+      return next
+    })
+
+    if (renamingPresetId === presetId) {
+      setRenamingPresetId(null)
+    }
+
+    setDeleteConfirmPresetId(null)
   }
 
   function handleAddToLibrary(presetId: string) {
@@ -183,8 +245,12 @@ export function Library() {
     })
 
     if (addedToast) {
-      setToastMessage(addedToast)
+      setToast({ message: addedToast })
     }
+  }
+
+  function handlePresetRowClick(presetId: string) {
+    console.log('Open preset', presetId)
   }
 
   function handleRenameSave(presetId: string, rawName: string) {
@@ -209,7 +275,7 @@ export function Library() {
     setRenamingPresetId(null)
 
     if (duplicateToast) {
-      setToastMessage(duplicateToast)
+      setToast({ message: duplicateToast })
     }
   }
 
@@ -235,7 +301,7 @@ export function Library() {
     setRenamingSetId(null)
 
     if (duplicateToast) {
-      setToastMessage(duplicateToast)
+      setToast({ message: duplicateToast })
     }
   }
 
@@ -258,9 +324,25 @@ export function Library() {
   function handleDeleteSet(setId: string) {
     setSets((current) => current.filter((set) => set.id !== setId))
 
-    if (expandedSetId === setId) {
-      setExpandedSetId(null)
-    }
+    setExpandedSetIds((current) => {
+      if (!current.has(setId)) {
+        return current
+      }
+
+      const next = new Set(current)
+      next.delete(setId)
+      return next
+    })
+
+    setSelectedIds((current) => {
+      if (!current.has(setId)) {
+        return current
+      }
+
+      const next = new Set(current)
+      next.delete(setId)
+      return next
+    })
 
     if (renamingSetId === setId) {
       setRenamingSetId(null)
@@ -268,7 +350,264 @@ export function Library() {
   }
 
   function handleToggleExpand(setId: string) {
-    setExpandedSetId((current) => (current === setId ? null : setId))
+    setExpandedSetIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(setId)) {
+        next.delete(setId)
+      } else {
+        next.add(setId)
+      }
+
+      return next
+    })
+  }
+
+  function handleReorderPresets(setId: string, presetIds: string[]) {
+    setSets((current) =>
+      current.map((set) =>
+        set.id === setId
+          ? {
+              ...set,
+              members: reorderSetMembers(set.members, presetIds),
+              lastUpdated: new Date(),
+            }
+          : set,
+      ),
+    )
+  }
+
+  function handleRemoveFromSet(setId: string, presetId: string) {
+    const set = sets.find((entry) => entry.id === setId)
+    const preset = presets.find((entry) => entry.id === presetId)
+
+    if (!set || !preset) {
+      return
+    }
+
+    const removedMember = getSetMember(set, presetId)
+
+    if (!removedMember) {
+      return
+    }
+
+    const removedIndex = set.members.indexOf(removedMember)
+
+    setSets((current) =>
+      current.map((entry) =>
+        entry.id === setId
+          ? {
+              ...entry,
+              members: removeSetMember(entry.members, presetId),
+              lastUpdated: new Date(),
+            }
+          : entry,
+      ),
+    )
+
+    setToast({
+      message: `Removed ${preset.name} from ${set.name}`,
+      actionLabel: 'Undo',
+      onAction: () => {
+        setSets((current) =>
+          current.map((entry) => {
+            if (entry.id !== setId || setHasPreset(entry, presetId)) {
+              return entry
+            }
+
+            const nextMembers = [...entry.members]
+            nextMembers.splice(removedIndex, 0, removedMember)
+            return { ...entry, members: nextMembers, lastUpdated: new Date() }
+          }),
+        )
+      },
+    })
+  }
+
+  function handleSetPresetAction(actionId: string, setId: string, presetId: string) {
+    if (actionId === 'remove-from-set') {
+      handleRemoveFromSet(setId, presetId)
+      return
+    }
+
+    if (actionId === 'move-to-set') {
+      setSetPicker({ mode: 'move-to-set', presetId, sourceSetId: setId })
+      return
+    }
+
+    if (actionId === 'open') {
+      handlePresetRowClick(presetId)
+    }
+  }
+
+  function handleSetPickerSelect(targetSetId: string) {
+    if (!setPicker) {
+      return
+    }
+
+    const preset = presets.find((entry) => entry.id === setPicker.presetId)
+    const targetSet = sets.find((entry) => entry.id === targetSetId)
+
+    if (!preset || !targetSet) {
+      return
+    }
+
+    if (setPicker.mode === 'add-to-set') {
+      if (setHasPreset(targetSet, setPicker.presetId)) {
+        setToast({
+          message: `${preset.name} is already in ${targetSet.name}`,
+        })
+        return
+      }
+
+      setSets((current) =>
+        current.map((entry) =>
+          entry.id === targetSetId
+            ? {
+                ...entry,
+                members: appendSetMembers(entry.members, [setPicker.presetId]),
+                lastUpdated: new Date(),
+              }
+            : entry,
+        ),
+      )
+      return
+    }
+
+    const sourceSet = sets.find((entry) => entry.id === setPicker.sourceSetId)
+    const movedMember = sourceSet
+      ? getSetMember(sourceSet, setPicker.presetId)
+      : undefined
+
+    setSets((current) =>
+      current.map((entry) => {
+        if (entry.id === setPicker.sourceSetId) {
+          return {
+            ...entry,
+            members: removeSetMember(entry.members, setPicker.presetId),
+            lastUpdated: new Date(),
+          }
+        }
+
+        if (entry.id === targetSetId) {
+          return {
+            ...entry,
+            members: [
+              ...entry.members,
+              movedMember ?? createSetMember(setPicker.presetId),
+            ],
+            lastUpdated: new Date(),
+          }
+        }
+
+        return entry
+      }),
+    )
+    setToast({ message: `Moved ${preset.name} to ${targetSet.name}` })
+  }
+
+  function handleSetPickerCreateNew() {
+    if (!setPicker) {
+      return
+    }
+
+    const presetId = setPicker.presetId
+    const preset = presets.find((entry) => entry.id === presetId)
+
+    if (!preset) {
+      return
+    }
+
+    const existingNames = new Set(sets.map((set) => set.name))
+    const newSet = createEmptySet(existingNames)
+
+    const sourceSet =
+      setPicker.mode === 'move-to-set'
+        ? sets.find((entry) => entry.id === setPicker.sourceSetId)
+        : undefined
+    const movedMember = sourceSet ? getSetMember(sourceSet, presetId) : undefined
+    const newMember = movedMember ?? createSetMember(presetId)
+
+    setSets((current) => {
+      const withNewSet = [newSet, ...current]
+
+      if (setPicker.mode === 'add-to-set') {
+        return withNewSet.map((entry) =>
+          entry.id === newSet.id
+            ? { ...entry, members: [newMember], lastUpdated: new Date() }
+            : entry,
+        )
+      }
+
+      return withNewSet.map((entry) => {
+        if (entry.id === newSet.id) {
+          return { ...entry, members: [newMember], lastUpdated: new Date() }
+        }
+
+        if (entry.id === setPicker.sourceSetId) {
+          return {
+            ...entry,
+            members: removeSetMember(entry.members, presetId),
+            lastUpdated: new Date(),
+          }
+        }
+
+        return entry
+      })
+    })
+
+    if (setPicker.mode === 'move-to-set') {
+      setToast({ message: `Moved ${preset.name} to ${newSet.name}` })
+    }
+  }
+
+  function handleOpenAddPresetPicker(setId: string) {
+    setAddPresetPickerSetId(setId)
+  }
+
+  function handleAddPresetsToSet(setId: string, presetIds: string[]) {
+    if (presetIds.length === 0) {
+      return
+    }
+
+    setSets((current) =>
+      current.map((entry) =>
+        entry.id === setId
+          ? {
+              ...entry,
+              members: appendSetMembers(entry.members, presetIds),
+              lastUpdated: new Date(),
+            }
+          : entry,
+      ),
+    )
+  }
+
+  function handleCreatePresetAndAddToSet(setId: string) {
+    const existingNames = new Set(presets.map((preset) => preset.name))
+    const newPreset = createBlankPreset(existingNames)
+
+    setPresets((current) => [newPreset, ...current])
+    setSets((current) =>
+      current.map((entry) =>
+        entry.id === setId
+          ? {
+              ...entry,
+              members: appendSetMembers(entry.members, [newPreset.id]),
+              lastUpdated: new Date(),
+            }
+          : entry,
+      ),
+    )
+  }
+
+  function handleNewSet() {
+    const existingNames = new Set(sets.map((set) => set.name))
+    const newSet = createEmptySet(existingNames)
+
+    setSets((current) => [newSet, ...current])
+    setExpandedSetIds((current) => new Set([...current, newSet.id]))
+    setRenamingSetId(newSet.id)
   }
 
   function handlePresetAction(actionId: string, presetId: string) {
@@ -284,12 +623,22 @@ export function Library() {
 
     if (actionId === 'rename') {
       setRenamingPresetId(presetId)
+      return
+    }
+
+    if (actionId === 'add-to-set') {
+      setSetPicker({ mode: 'add-to-set', presetId })
+      return
+    }
+
+    if (actionId === 'delete') {
+      setDeleteConfirmPresetId(presetId)
     }
   }
 
   function handleSetAction(actionId: string, setId: string) {
     if (actionId === 'open-editor') {
-      setToastMessage('Set editor coming soon')
+      setToast({ message: 'Set editor coming soon' })
       return
     }
 
@@ -303,19 +652,34 @@ export function Library() {
       return
     }
 
+    if (actionId === 'add-presets') {
+      handleOpenAddPresetPicker(setId)
+      return
+    }
+
+    if (actionId === 'send-to-quray') {
+      console.log('Send set to Quray', setId)
+      return
+    }
+
+    if (actionId === 'export') {
+      console.log('Export set', setId)
+      return
+    }
+
     if (actionId === 'delete') {
       handleDeleteSet(setId)
     }
   }
 
-  function toggleSelect(presetId: string) {
+  function toggleSelect(id: string) {
     setSelectedIds((current) => {
       const next = new Set(current)
 
-      if (next.has(presetId)) {
-        next.delete(presetId)
+      if (next.has(id)) {
+        next.delete(id)
       } else {
-        next.add(presetId)
+        next.add(id)
       }
 
       return next
@@ -323,6 +687,11 @@ export function Library() {
   }
 
   function handleSelectAll() {
+    if (isSetsView) {
+      setSelectedIds(new Set(visibleSets.map((set) => set.id)))
+      return
+    }
+
     setSelectedIds(new Set(visiblePresets.map((preset) => preset.id)))
   }
 
@@ -331,10 +700,20 @@ export function Library() {
   }
 
   function handleBulkSendToQuray() {
+    if (isSetsView) {
+      console.log('Send sets to Quray', [...selectedIds])
+      return
+    }
+
     console.log('Send to Quray', [...selectedIds])
   }
 
   function handleBulkExport() {
+    if (isSetsView) {
+      console.log('Export sets', [...selectedIds])
+      return
+    }
+
     console.log('Export presets', [...selectedIds])
   }
 
@@ -347,10 +726,10 @@ export function Library() {
     onPresetAction: handlePresetAction,
     onRenameSave: handleRenameSave,
     onRenameCancel: handleRenameCancel,
-    onRowClick: isExploreTab ? handleAddToLibrary : undefined,
+    onRowClick: isExploreTab ? handleAddToLibrary : handlePresetRowClick,
     sortKey,
     onSortChange: handleSortChange,
-    bulkSelectionEnabled: !isExploreTab && !isSetsView,
+    bulkSelectionEnabled: !isExploreTab,
     selectedIds,
     onToggleSelect: toggleSelect,
     onSelectAll: handleSelectAll,
@@ -359,20 +738,42 @@ export function Library() {
     onBulkExport: handleBulkExport,
     sets: visibleSets,
     allPresets: presets,
-    expandedSetId,
+    expandedSetIds,
     onToggleExpand: handleToggleExpand,
+    onReorderPresets: handleReorderPresets,
     renamingSetId,
     onSetAction: handleSetAction,
     onSetRenameSave: handleSetRenameSave,
     onSetRenameCancel: handleSetRenameCancel,
+    onToggleSetFavourite: toggleFavourite,
+    onSetPresetAction: handleSetPresetAction,
+    onAddPresetToSet: handleOpenAddPresetPicker,
   }
+
+  const addPresetPickerSet = addPresetPickerSetId
+    ? sets.find((set) => set.id === addPresetPickerSetId)
+    : undefined
+
+  const deletePreset = deleteConfirmPresetId
+    ? presets.find((preset) => preset.id === deleteConfirmPresetId)
+    : undefined
+
+  const deletePresetSetCount = deleteConfirmPresetId
+    ? presetReferencedInSets(sets, deleteConfirmPresetId)
+    : 0
+
+  const deleteConfirmBody =
+    deletePreset && deletePresetSetCount > 0
+      ? `${deletePreset.name} is used in ${deletePresetSetCount} set(s). Deleting removes it everywhere, including those sets.`
+      : deletePreset
+        ? `Delete ${deletePreset.name}? This can't be undone.`
+        : ''
 
   return (
     <>
       <LibraryShell
         activeTab={activeTab}
         onActiveTabChange={handleActiveTabChange}
-        view={view}
         filters={filters}
         onFilterChange={handleFilterChange}
         openFilter={openFilter}
@@ -383,18 +784,62 @@ export function Library() {
         onlyFavourites={onlyFavourites}
         onOnlyFavouritesChange={setOnlyFavourites}
         onClearAllFilters={handleClearAllFilters}
+        onNewPreset={() => undefined}
         stickyHeader={
           <PresetListStickyHeader
             {...listProps}
             view={view}
             onViewChange={handleViewChange}
+            onNewSet={handleNewSet}
           />
         }
       >
         <PresetListBody {...listProps} view={view} />
       </LibraryShell>
 
-      {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          onDismiss={dismissToast}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+        />
+      )}
+
+      {deletePreset && deleteConfirmPresetId && (
+        <ConfirmDialog
+          open
+          title="Delete preset"
+          body={deleteConfirmBody}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(deleteConfirmPresetId)}
+          onCancel={() => setDeleteConfirmPresetId(null)}
+        />
+      )}
+
+      <SetPickerModal
+        open={setPicker !== null}
+        title={setPicker?.mode === 'move-to-set' ? 'Move to set' : 'Add to set'}
+        sets={sets}
+        excludeSetId={
+          setPicker?.mode === 'move-to-set' ? setPicker.sourceSetId : undefined
+        }
+        onClose={() => setSetPicker(null)}
+        onSelectSet={handleSetPickerSelect}
+        onCreateSet={handleSetPickerCreateNew}
+      />
+
+      {addPresetPickerSet && (
+        <AddPresetPickerModal
+          open={addPresetPickerSetId !== null}
+          presets={presets}
+          setPresetIds={getSetPresetIds(addPresetPickerSet)}
+          onClose={() => setAddPresetPickerSetId(null)}
+          onAdd={(presetIds) => handleAddPresetsToSet(addPresetPickerSet.id, presetIds)}
+          onCreatePreset={() => handleCreatePresetAndAddToSet(addPresetPickerSet.id)}
+        />
+      )}
     </>
   )
 }

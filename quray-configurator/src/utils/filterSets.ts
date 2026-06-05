@@ -1,13 +1,30 @@
 import type { Set as LibrarySet } from '@/types'
 
-export function filterSets(sets: LibrarySet[], searchQuery: string): LibrarySet[] {
+export type FilterSetsOptions = {
+  searchQuery: string
+  onlyFavourites?: boolean
+  favourites?: Record<string, boolean>
+}
+
+export function filterSets(
+  sets: LibrarySet[],
+  { searchQuery, onlyFavourites = false, favourites = {} }: FilterSetsOptions,
+): LibrarySet[] {
   const normalized = searchQuery.trim().toLowerCase()
 
-  if (!normalized) {
-    return sets
-  }
+  return sets.filter((set) => {
+    const isFavourite = favourites[set.id] ?? false
 
-  return sets.filter((set) => set.name.toLowerCase().includes(normalized))
+    if (onlyFavourites && !isFavourite) {
+      return false
+    }
+
+    if (!normalized) {
+      return true
+    }
+
+    return set.name.toLowerCase().includes(normalized)
+  })
 }
 
 export function duplicateSetNameToastMessage(name: string) {

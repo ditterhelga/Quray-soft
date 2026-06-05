@@ -1,9 +1,19 @@
-import { ArrowSquareOut, Star } from '@phosphor-icons/react'
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { ArrowSquareOut, DotsSixVertical, Minus, Star } from '@phosphor-icons/react'
+import type { DraggableAttributes } from '@dnd-kit/core'
+import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 import {
   PRESET_TABLE_ACTIONS_CELL,
   PRESET_TABLE_GRID,
   PRESET_TABLE_GRID_EXPLORE,
+  PRESET_TABLE_GRID_SETS,
+  PRESET_TABLE_OUTPUT_CELL,
   PRESET_TABLE_STATUS_CELL,
 } from '@/components/library/presetTableLayout'
 import { PresetKebabMenu } from '@/components/library/PresetKebabMenu'
@@ -11,6 +21,7 @@ import {
   presetRowActionButtonClassName,
   presetRowActionTooltipClassName,
   presetRowFavouriteButtonClassName,
+  presetRowRemoveFromSetButtonClassName,
 } from '@/components/library/presetRowActions'
 import { formatOutputLabel, OutputChip, ZoneBadge } from '@/components/ui/Badge'
 import {
@@ -21,12 +32,25 @@ import { StatusChip, getSyncStatusLabel } from '@/components/ui/StatusChip'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
-import type { Preset } from '@/types'
+import { setSyncStatusToChipStatus } from '@/utils/setActions'
+import type { Preset, SetSyncStatus } from '@/types'
 
-export function presetRowClassName(forceHover = false, isRenaming = false) {
-  return `group rounded-lg border border-border bg-bg-active p-6 transition-colors duration-[120ms] ${
-    isRenaming ? '' : 'cursor-pointer hover:bg-bg-row-hover'
-  } ${forceHover && !isRenaming ? 'bg-bg-row-hover' : ''}`
+export function presetRowClassName(
+  forceHover = false,
+  isRenaming = false,
+  nested = false,
+) {
+  const interactiveClassName = isRenaming
+    ? ''
+    : 'cursor-pointer hover:bg-bg-row-hover'
+  const hoverStateClassName =
+    forceHover && !isRenaming ? 'bg-bg-row-hover' : ''
+
+  if (nested) {
+    return `group bg-transparent p-8 transition-colors duration-[120ms] ${interactiveClassName} ${hoverStateClassName}`.trim()
+  }
+
+  return `group rounded-lg border border-border bg-bg-active p-6 transition-colors duration-[120ms] ${interactiveClassName} ${hoverStateClassName}`.trim()
 }
 
 export function presetRowSecondaryActionsClassName(forceHover = false) {
@@ -110,6 +134,9 @@ function PresetNameColumn({
   onToggleSelect,
   onRenameSave,
   onRenameCancel,
+  dragHandle,
+  dragHandleAttributes,
+  dragHandleListeners,
 }: {
   preset: Preset
   forceHover: boolean
@@ -121,6 +148,9 @@ function PresetNameColumn({
   onToggleSelect?: () => void
   onRenameSave?: (name: string) => void
   onRenameCancel?: () => void
+  dragHandle?: boolean
+  dragHandleAttributes?: DraggableAttributes
+  dragHandleListeners?: SyntheticListenerMap
 }) {
   const nameBlock = isRenaming ? (
     <PresetNameEditor
@@ -138,6 +168,27 @@ function PresetNameColumn({
     ) : (
       <DeviceNames devices={preset.targetDevices} />
     )
+
+  if (dragHandle) {
+    return (
+      <div className="relative min-w-0">
+        <button
+          type="button"
+          {...dragHandleAttributes}
+          {...dragHandleListeners}
+          onClick={(event) => event.stopPropagation()}
+          className="absolute left-0 top-[0.5625rem] z-10 flex h-7 w-7 -translate-y-1/2 cursor-grab touch-none items-center justify-center bg-transparent text-text-muted active:cursor-grabbing"
+          aria-label={`Reorder ${preset.name}`}
+        >
+          <DotsSixVertical size={16} weight="regular" aria-hidden="true" />
+        </button>
+        <div className={presetRowNameColumnClassName(true)}>
+          {nameBlock}
+          {subLine}
+        </div>
+      </div>
+    )
+  }
 
   if (!bulkSelectionEnabled) {
     return (
@@ -243,8 +294,18 @@ type PresetRowProps = {
   bulkActive?: boolean
   isSelected?: boolean
   onToggleSelect?: () => void
+  dragHandle?: boolean
+  dragHandleAttributes?: DraggableAttributes
+  dragHandleListeners?: SyntheticListenerMap
+  isDragPlaceholder?: boolean
+  isDragOverlay?: boolean
+  showZones?: boolean
+  showFavourite?: boolean
   forceHover?: boolean
   forceKebabOpen?: boolean
+  nested?: boolean
+  showOutput?: boolean
+  memberSyncStatus?: SetSyncStatus
 }
 
 export function PresetRow({
@@ -261,8 +322,18 @@ export function PresetRow({
   bulkActive = false,
   isSelected = false,
   onToggleSelect,
+  dragHandle = false,
+  dragHandleAttributes,
+  dragHandleListeners,
+  isDragPlaceholder = false,
+  isDragOverlay = false,
+  showZones = true,
+  showFavourite = true,
   forceHover = false,
   forceKebabOpen = false,
+  nested = false,
+  showOutput = true,
+  memberSyncStatus,
 }: PresetRowProps) {
   function handleRowClick() {
     if (isRenaming) {
@@ -290,7 +361,18 @@ export function PresetRow({
 
   function handleOpenInEditor(event: MouseEvent) {
     event.stopPropagation()
+
+    if (nested) {
+      onPresetAction?.('open', preset.id)
+      return
+    }
+
     console.log('Open in editor', preset.id)
+  }
+
+  function handleRemoveFromSet(event: MouseEvent) {
+    event.stopPropagation()
+    onPresetAction?.('remove-from-set', preset.id)
   }
 
   function handlePresetAction(actionId: string, presetId: string) {
@@ -303,74 +385,114 @@ export function PresetRow({
       ? `Add ${preset.name} to My Library`
       : `Open preset ${preset.name}`
 
+  const dragStateClassName = isDragPlaceholder
+    ? 'opacity-40'
+    : isDragOverlay
+      ? 'shadow-lg'
+      : ''
+
+  const gridClassName =
+    variant === 'explore'
+      ? PRESET_TABLE_GRID_EXPLORE
+      : showZones
+        ? PRESET_TABLE_GRID
+        : PRESET_TABLE_GRID_SETS
+
+  const statusChipValue = memberSyncStatus
+    ? setSyncStatusToChipStatus(memberSyncStatus)
+    : preset.syncStatus
+
   return (
     <article
-      className={presetRowClassName(forceHover, isRenaming)}
-      onClick={handleRowClick}
-      onKeyDown={handleRowKeyDown}
-      role={isRenaming ? undefined : 'button'}
-      tabIndex={isRenaming ? -1 : 0}
-      aria-label={isRenaming ? undefined : rowAriaLabel}
+      className={`${presetRowClassName(forceHover, isRenaming, nested)} ${dragStateClassName}`.trim()}
+      onClick={isDragOverlay ? undefined : handleRowClick}
+      onKeyDown={isDragOverlay ? undefined : handleRowKeyDown}
+      role={isRenaming || isDragOverlay ? undefined : 'button'}
+      tabIndex={isRenaming || isDragOverlay ? -1 : 0}
+      aria-label={isRenaming || isDragOverlay ? undefined : rowAriaLabel}
     >
-      <div className={variant === 'explore' ? PRESET_TABLE_GRID_EXPLORE : PRESET_TABLE_GRID}>
+      <div className={gridClassName}>
         <div className="min-w-0">
           <PresetNameColumn
             preset={preset}
             forceHover={forceHover}
             isRenaming={isRenaming}
             variant={variant}
-            bulkSelectionEnabled={bulkSelectionEnabled}
+            bulkSelectionEnabled={dragHandle ? false : bulkSelectionEnabled}
             bulkActive={bulkActive}
             isSelected={isSelected}
             onToggleSelect={onToggleSelect}
             onRenameSave={onRenameSave}
             onRenameCancel={onRenameCancel}
+            dragHandle={dragHandle}
+            dragHandleAttributes={dragHandleAttributes}
+            dragHandleListeners={dragHandleListeners}
           />
         </div>
 
         {variant === 'library' && (
           <div className={PRESET_TABLE_STATUS_CELL}>
-            <StatusChipCell status={preset.syncStatus} />
+            <StatusChipCell status={statusChipValue} />
           </div>
         )}
 
-        <div className="flex flex-wrap gap-1">
-          {preset.outputTypes.map((outputType) => (
-            <OutputChip key={outputType} label={formatOutputLabel(outputType)} />
-          ))}
-        </div>
+        {showOutput && variant === 'library' && <div aria-hidden="true" />}
 
-        <div>
-          <ZoneBadge count={preset.zoneCount} />
-        </div>
+        {showOutput && (
+          <div className={PRESET_TABLE_OUTPUT_CELL}>
+            {preset.outputTypes.map((outputType) => (
+              <OutputChip key={outputType} label={formatOutputLabel(outputType)} />
+            ))}
+          </div>
+        )}
+
+        {showZones && (
+          <div>
+            <ZoneBadge count={preset.zoneCount} />
+          </div>
+        )}
 
         <div className={presetRelativeTimeClassName()}>
           {formatRelativeTime(preset.lastUpdated)}
         </div>
 
         <div className={PRESET_TABLE_ACTIONS_CELL}>
-          <Tooltip
-            content={favouriteTooltip}
-            className={presetRowActionTooltipClassName}
-          >
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                onToggleFavourite()
-              }}
-              className={presetRowFavouriteButtonClassName()}
-              aria-label={favouriteTooltip}
-              aria-pressed={isFavourite}
+          {showFavourite && (
+            <Tooltip
+              content={favouriteTooltip}
+              className={presetRowActionTooltipClassName}
             >
-              <Star
-                size={18}
-                weight={isFavourite ? 'fill' : 'regular'}
-                aria-hidden="true"
-              />
-            </button>
-          </Tooltip>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onToggleFavourite()
+                }}
+                className={presetRowFavouriteButtonClassName()}
+                aria-label={favouriteTooltip}
+                aria-pressed={isFavourite}
+              >
+                <Star
+                  size={18}
+                  weight={isFavourite ? 'fill' : 'regular'}
+                  aria-hidden="true"
+                />
+              </button>
+            </Tooltip>
+          )}
           <div className={presetRowSecondaryActionsClassName(forceHover)}>
+            {nested && !isDragOverlay && (
+              <Tooltip content="Remove from set" className={presetRowActionTooltipClassName}>
+                <button
+                  type="button"
+                  onClick={handleRemoveFromSet}
+                  className={presetRowRemoveFromSetButtonClassName()}
+                  aria-label="Remove from set"
+                >
+                  <Minus size={18} weight="regular" aria-hidden="true" />
+                </button>
+              </Tooltip>
+            )}
             <Tooltip content="Open in editor" className={presetRowActionTooltipClassName}>
               <button
                 type="button"
@@ -383,7 +505,7 @@ export function PresetRow({
             </Tooltip>
             <PresetKebabMenu
               presetId={preset.id}
-              variant={variant}
+              variant={nested ? 'nested-set' : variant}
               forceOpen={forceKebabOpen}
               onItemSelect={handlePresetAction}
             />
