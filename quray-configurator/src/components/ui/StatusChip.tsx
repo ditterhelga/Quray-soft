@@ -2,10 +2,13 @@ import StatusModifiedIcon from '@/assets/icons/status-modified.svg?react'
 import StatusNoneIcon from '@/assets/icons/status-none.svg?react'
 import StatusOnIcon from '@/assets/icons/status-on.svg?react'
 import type { ComponentType, SVGProps } from 'react'
+import type { DeviceSyncStatus } from '@/data/deviceWorkingSet'
 import type { SyncStatus } from '@/types'
 
+export type StatusChipValue = SyncStatus | DeviceSyncStatus
+
 const STATUS_CHIP_META: Record<
-  SyncStatus,
+  StatusChipValue,
   {
     label: string
     Icon: ComponentType<SVGProps<SVGSVGElement>>
@@ -27,17 +30,27 @@ const STATUS_CHIP_META: Record<
     Icon: StatusNoneIcon,
     iconClassName: 'text-status-neutral',
   },
+  current: {
+    label: 'On device',
+    Icon: StatusOnIcon,
+    iconClassName: 'text-status-positive',
+  },
+  'needs-sync': {
+    label: 'Needs sync',
+    Icon: StatusModifiedIcon,
+    iconClassName: 'text-status-progress',
+  },
 }
 
 export function statusChipClassName() {
   return 'inline-flex items-center justify-center rounded-sm bg-bg-chip px-2 py-1.5'
 }
 
-export function getSyncStatusLabel(status: SyncStatus) {
+export function getSyncStatusLabel(status: StatusChipValue) {
   return STATUS_CHIP_META[status].label
 }
 
-export function StatusChip({ status }: { status: SyncStatus }) {
+export function StatusChip({ status }: { status: StatusChipValue }) {
   const meta = STATUS_CHIP_META[status]
   const Icon = meta.Icon
 

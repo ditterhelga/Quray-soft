@@ -1,4 +1,4 @@
-import type { Preset } from '@/types'
+import type { Preset, Set as LibrarySet } from '@/types'
 
 export type SortKey = 'name' | 'zones' | 'lastUpdated'
 export type SortDirection = 'asc' | 'desc'
@@ -51,6 +51,29 @@ export function sortPresets(presets: Preset[], sort: PresetSort): Preset[] {
       case 'lastUpdated':
         comparison =
           new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime()
+        break
+    }
+
+    return comparison * multiplier
+  })
+}
+
+export function sortSets(sets: LibrarySet[], sort: PresetSort): LibrarySet[] {
+  const sortKey =
+    sort.sortKey === 'name' || sort.sortKey === 'lastUpdated'
+      ? sort.sortKey
+      : 'lastUpdated'
+  const multiplier = sort.sortDirection === 'asc' ? 1 : -1
+
+  return [...sets].sort((a, b) => {
+    let comparison = 0
+
+    switch (sortKey) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name)
+        break
+      case 'lastUpdated':
+        comparison = a.lastUpdated.getTime() - b.lastUpdated.getTime()
         break
     }
 

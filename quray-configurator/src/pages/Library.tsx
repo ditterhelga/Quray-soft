@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   PresetListStickyHeader,
   PresetListBody,
@@ -41,9 +41,11 @@ import {
   DEFAULT_PRESET_SORT,
   nextPresetSort,
   sortPresets,
+  sortSets,
   type SortDirection,
   type SortKey,
 } from '@/utils/sortPresets'
+import { consumeLibrarySetFocus } from '@/utils/deviceNavigation'
 
 type ToastState = {
   message: string
@@ -87,13 +89,35 @@ export function Library() {
   const [addPresetPickerSetId, setAddPresetPickerSetId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [view, setView] = useState<ListView>('presets')
+  const pendingSetFocus = useRef(consumeLibrarySetFocus())
 
   const dismissToast = useCallback(() => {
     setToast(null)
   }, [])
 
+  useEffect(() => {
+    const setId = pendingSetFocus.current
+    if (!setId) {
+      return
+    }
+
+    setActiveTab('library')
+    setView('sets')
+    setExpandedSetIds(new Set([setId]))
+    setSelectedIds(new Set())
+
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`library-set-${setId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
   const isExploreTab = activeTab === 'explore'
-  const isSetsView = view === 'sets'
+  const isSetsView = view === 'sets' && !isExploreTab
   const presetSource = isExploreTab ? EXPLORE_PRESETS : presets
   const searchMode = isExploreTab ? 'explore' : 'library'
   const rowVariant = isExploreTab ? 'explore' : 'library'
@@ -120,15 +144,26 @@ export function Library() {
     isSetsView,
   ])
 
-  const visibleSets = useMemo(
-    () =>
-      filterSets(sets, {
-        searchQuery,
-        onlyFavourites,
-        favourites,
-      }),
-    [sets, searchQuery, onlyFavourites, favourites],
-  )
+  const visibleSets = useMemo(() => {
+    const filtered = filterSets(sets, {
+      filters,
+      searchQuery,
+      presets,
+      onlyFavourites,
+      favourites,
+    })
+
+    return sortSets(filtered, { sortKey, sortDirection })
+  }, [
+    sets,
+    filters,
+    searchQuery,
+    presets,
+    onlyFavourites,
+    favourites,
+    sortKey,
+    sortDirection,
+  ])
 
   function handleActiveTabChange(nextTab: LibraryTab) {
     if (nextTab === activeTab) {
@@ -136,6 +171,9 @@ export function Library() {
     }
 
     setActiveTab(nextTab)
+    if (nextTab === 'explore') {
+      setView('presets')
+    }
     setFilters(EMPTY_FILTERS)
     setSearchQuery('')
     setOnlyFavourites(false)
@@ -148,10 +186,6 @@ export function Library() {
   function handleViewChange(nextView: ListView) {
     if (nextView === view) {
       return
-    }
-
-    if (nextView === 'sets') {
-      setSearchQuery('')
     }
 
     setSelectedIds(new Set())

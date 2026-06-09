@@ -8,6 +8,8 @@ import {
   presetListToolbarClassName,
   libraryListBodyClassName,
 } from '@/components/library/libraryLayout'
+import { PresetTableSelectAllCheckbox } from '@/components/library/PresetTableSelectAllCheckbox'
+import { presetRowNameWithCheckboxClassName } from '@/components/library/presetRowSelection'
 import { PresetTableSortHeader } from '@/components/library/PresetTableSortHeader'
 import { PresetRow } from '@/components/library/PresetRow'
 import { SetRow } from '@/components/library/SetRow'
@@ -83,32 +85,48 @@ export function PresetListStickyHeader({
   const selectedCount = selectedIds.size
   const tableHeaderClassName =
     variant === 'explore' ? PRESET_TABLE_HEADER_EXPLORE : PRESET_TABLE_HEADER
-  const listCount = view === 'sets' ? sets.length : presets.length
+  const effectiveView = variant === 'explore' ? 'presets' : view
+  const listCount = effectiveView === 'sets' ? sets.length : presets.length
+  const showViewToggle = variant !== 'explore'
 
-  if (view === 'sets') {
+  if (effectiveView === 'sets') {
     return (
       <>
-        <div className={presetListToolbarClassName()}>
-          <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
-          {bulkSelectionEnabled && (
-            <BulkActionBar
-              selectedCount={selectedCount}
-              totalCount={listCount}
-              onSelectAll={onSelectAll}
-              onClear={onClearSelection}
-              onSendToQuray={onBulkSendToQuray}
-              onExport={onBulkExport}
-            />
-          )}
-        </div>
+        {(showViewToggle || bulkSelectionEnabled) && (
+          <div className={presetListToolbarClassName()}>
+            {showViewToggle && (
+              <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
+            )}
+            {bulkSelectionEnabled && (
+              <BulkActionBar
+                selectedCount={selectedCount}
+                totalCount={listCount}
+                onSelectAll={onSelectAll}
+                onClear={onClearSelection}
+                onSendToQuray={onBulkSendToQuray}
+                onExport={onBulkExport}
+              />
+            )}
+          </div>
+        )}
         <div className={presetListTableHeaderClassName()}>
           <div className={PRESET_TABLE_HEADER_SETS}>
-            <PresetTableSortHeader
-              label="Name"
-              sortKey="name"
-              activeSortKey={sortKey}
-              onSort={onSortChange}
-            />
+            <div className={presetRowNameWithCheckboxClassName()}>
+              {bulkSelectionEnabled && (
+                <PresetTableSelectAllCheckbox
+                  selectedCount={selectedCount}
+                  totalCount={listCount}
+                  onSelectAll={onSelectAll}
+                  onClearSelection={onClearSelection}
+                />
+              )}
+              <PresetTableSortHeader
+                label="Name"
+                sortKey="name"
+                activeSortKey={sortKey}
+                onSort={onSortChange}
+              />
+            </div>
             <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
             <PresetTableSortHeader
               label="Last updated"
@@ -125,27 +143,41 @@ export function PresetListStickyHeader({
 
   return (
     <>
-      <div className={presetListToolbarClassName()}>
-        <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
-        {bulkSelectionEnabled && (
-          <BulkActionBar
-            selectedCount={selectedCount}
-            totalCount={listCount}
-            onSelectAll={onSelectAll}
-            onClear={onClearSelection}
-            onSendToQuray={onBulkSendToQuray}
-            onExport={onBulkExport}
-          />
-        )}
-      </div>
+      {(showViewToggle || bulkSelectionEnabled) && (
+        <div className={presetListToolbarClassName()}>
+          {showViewToggle && (
+            <LibraryViewToggle value={view} onChange={onViewChange} onNewSet={onNewSet} />
+          )}
+          {bulkSelectionEnabled && (
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalCount={listCount}
+              onSelectAll={onSelectAll}
+              onClear={onClearSelection}
+              onSendToQuray={onBulkSendToQuray}
+              onExport={onBulkExport}
+            />
+          )}
+        </div>
+      )}
       <div className={presetListTableHeaderClassName()}>
         <div className={tableHeaderClassName}>
-          <PresetTableSortHeader
-            label="Name"
-            sortKey="name"
-            activeSortKey={sortKey}
-            onSort={onSortChange}
-          />
+          <div className={presetRowNameWithCheckboxClassName()}>
+            {bulkSelectionEnabled && (
+              <PresetTableSelectAllCheckbox
+                selectedCount={selectedCount}
+                totalCount={listCount}
+                onSelectAll={onSelectAll}
+                onClearSelection={onClearSelection}
+              />
+            )}
+            <PresetTableSortHeader
+              label="Name"
+              sortKey="name"
+              activeSortKey={sortKey}
+              onSort={onSortChange}
+            />
+          </div>
           {variant === 'library' && (
             <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
           )}
@@ -207,7 +239,9 @@ export function PresetListBody({
     [allPresets],
   )
 
-  if (view === 'sets') {
+  const effectiveView = variant === 'explore' ? 'presets' : view
+
+  if (effectiveView === 'sets') {
     if (sets.length === 0) {
       return (
         <div className={libraryListBodyClassName()}>

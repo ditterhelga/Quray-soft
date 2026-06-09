@@ -8,13 +8,13 @@ export const PRESET_TABLE_GRID_EXPLORE =
   'grid grid-cols-[minmax(280px,1fr)_200px_80px_128px_140px] items-center gap-x-8'
 
 export const PRESET_TABLE_HEADER =
-  `${PRESET_TABLE_GRID} px-6 text-sm font-light text-text-muted`
+  `${PRESET_TABLE_GRID} pr-6 pl-4 text-sm font-light text-text-muted`
 
 export const PRESET_TABLE_HEADER_SETS =
-  `${PRESET_TABLE_GRID_SETS} px-6 text-sm font-light text-text-muted`
+  `${PRESET_TABLE_GRID_SETS} pr-6 pl-4 text-sm font-light text-text-muted`
 
 export const PRESET_TABLE_HEADER_EXPLORE =
-  `${PRESET_TABLE_GRID_EXPLORE} px-6 text-sm font-light text-text-muted`
+  `${PRESET_TABLE_GRID_EXPLORE} pr-6 pl-4 text-sm font-light text-text-muted`
 
 export const PRESET_TABLE_ACTIONS_CELL = 'flex items-center justify-end gap-3'
 

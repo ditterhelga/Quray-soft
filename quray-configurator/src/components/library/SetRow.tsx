@@ -17,7 +17,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowSquareOut, CaretDown, CaretRight, Plus, Star } from '@phosphor-icons/react'
+import type { DraggableAttributes } from '@dnd-kit/core'
+import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
+import { ArrowSquareOut, CaretDown, CaretRight, DotsSixVertical, Plus, Star } from '@phosphor-icons/react'
 import {
   useEffect,
   useRef,
@@ -25,6 +27,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react'
+import { DeviceSlotKebabMenu } from '@/components/device/DeviceSlotKebabMenu'
 import { SetKebabMenu } from '@/components/library/SetKebabMenu'
 import {
   PRESET_TABLE_ACTIONS_CELL,
@@ -42,16 +45,25 @@ import {
   PresetRow,
   presetRowSecondaryActionsClassName,
 } from '@/components/library/PresetRow'
+import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import {
+  presetRowCheckboxNameAlignClassName,
+  presetRowCheckboxSlotClassName,
   presetRowCheckboxVisibilityClassName,
-  presetRowNameColumnClassName,
+  presetRowNameWithCheckboxRowClassName,
 } from '@/components/library/presetRowSelection'
 import { StatusChip, getSyncStatusLabel } from '@/components/ui/StatusChip'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import { Tooltip } from '@/components/ui/Tooltip'
+import type { DeviceSyncStatus } from '@/data/deviceWorkingSet'
 import { formatRelativeTime } from '@/utils/formatRelativeTime'
+import {
+  aggregateDeviceSyncStatus,
+  getDevicePresetSyncStatus,
+} from '@/utils/deviceSyncStatus'
 import { aggregateSetSyncStatus, getSetPresetIds } from '@/utils/setMembers'
 import { setSyncStatusToChipStatus } from '@/utils/setActions'
+import type { StatusChipValue } from '@/components/ui/StatusChip'
 import type { Preset, Set as LibrarySet, SetSyncStatus } from '@/types'
 
 export function setRowSubtitleClassName() {
@@ -81,7 +93,7 @@ export function setRowExpandedPresetsClassName() {
 }
 
 export function setRowAddPresetButtonClassName() {
-  return 'flex w-full cursor-pointer items-center gap-2 bg-transparent py-4 text-base font-medium text-text-secondary transition-colors duration-[120ms] hover:text-text-primary'
+  return libraryOutlinedButtonClassName()
 }
 
 function SetNameEditor({
@@ -205,6 +217,8 @@ type SetExpandedPresetsProps = {
   onPresetAction?: (actionId: string, presetId: string) => void
   onReorderPresets?: (setId: string, presetIds: string[]) => void
   onAddPreset?: () => void
+  readOnly?: boolean
+  devicePresetSyncById?: Map<string, DeviceSyncStatus>
 }
 
 function SetExpandedPresets({
@@ -214,6 +228,8 @@ function SetExpandedPresets({
   onPresetAction,
   onReorderPresets,
   onAddPreset,
+  readOnly = false,
+  devicePresetSyncById,
 }: SetExpandedPresetsProps) {
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
@@ -270,6 +286,32 @@ function SetExpandedPresets({
     setActivePresetId(null)
   }
 
+  if (readOnly) {
+    return (
+      <div className={setRowExpandedPresetsClassName()}>
+        {sortablePresets.map(({ preset, memberSyncStatus }) => (
+          <PresetRow
+            key={`${set.id}-${preset.id}`}
+            preset={preset}
+            isFavourite={false}
+            onToggleFavourite={() => undefined}
+            showZones={false}
+            showFavourite={false}
+            showOutput={false}
+            memberSyncStatus={devicePresetSyncById ? undefined : memberSyncStatus}
+            deviceSyncStatus={
+              devicePresetSyncById
+                ? getDevicePresetSyncStatus(preset.id)
+                : undefined
+            }
+            nested
+            readOnly
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -294,17 +336,19 @@ function SetExpandedPresets({
         </div>
       </SortableContext>
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation()
-          onAddPreset?.()
-        }}
-        className={setRowAddPresetButtonClassName()}
-      >
-        <Plus size={16} weight="regular" className="shrink-0" aria-hidden="true" />
-        Add preset
-      </button>
+      <div className="py-4">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onAddPreset?.()
+          }}
+          className={setRowAddPresetButtonClassName()}
+        >
+          <Plus size={16} weight="regular" aria-hidden="true" />
+          Add preset
+        </button>
+      </div>
 
       <DragOverlay dropAnimation={null}>
         {activePreset ? (
@@ -345,6 +389,17 @@ type SetRowProps = {
   onToggleSelect?: () => void
   forceHover?: boolean
   forceKebabOpen?: boolean
+  readOnly?: boolean
+  devicePresetSyncById?: Map<string, DeviceSyncStatus>
+  deviceSlotKebab?: {
+    showUpdate: boolean
+    onAction: (actionId: string) => void
+    forceOpen?: boolean
+  }
+  slotDragHandle?: boolean
+  slotDragHandleAttributes?: DraggableAttributes
+  slotDragHandleListeners?: SyntheticListenerMap
+  isDragPlaceholder?: boolean
 }
 
 export function SetRow({
@@ -368,9 +423,24 @@ export function SetRow({
   onToggleSelect,
   forceHover = false,
   forceKebabOpen = false,
+  readOnly = false,
+  devicePresetSyncById,
+  deviceSlotKebab,
+  slotDragHandle = false,
+  slotDragHandleAttributes,
+  slotDragHandleListeners,
+  isDragPlaceholder = false,
 }: SetRowProps) {
   const aggregateStatus = aggregateSetSyncStatus(set.members)
-  const chipStatus = setSyncStatusToChipStatus(aggregateStatus)
+  const libraryChipStatus = setSyncStatusToChipStatus(aggregateStatus)
+  const deviceSetSyncStatus = devicePresetSyncById
+    ? aggregateDeviceSyncStatus(
+        set.members.map(
+          (member) => devicePresetSyncById.get(member.presetId) ?? 'current',
+        ),
+      )
+    : undefined
+  const chipStatus: StatusChipValue = deviceSetSyncStatus ?? libraryChipStatus
   const statusLabel = getSyncStatusLabel(chipStatus)
   const presetCount = set.members.length
   const favouriteTooltip = isFavourite ? 'Remove from favourites' : 'Add to favourites'
@@ -407,10 +477,49 @@ export function SetRow({
     onSetPresetAction?.(actionId, set.id, presetId)
   }
 
+  function renderSetTitleBlock() {
+    return (
+      <div className="min-w-0">
+        <div className="inline-flex max-w-full items-center gap-2">
+          {isRenaming ? (
+            <SetNameEditor
+              initialName={set.name}
+              onSave={(name) => onRenameSave?.(name)}
+              onCancel={() => onRenameCancel?.()}
+            />
+          ) : (
+            <>
+              <span className={`${presetNameClassName(forceHover)} truncate`}>{set.name}</span>
+              {isExpanded ? (
+                <CaretDown
+                  size={16}
+                  weight="bold"
+                  className="shrink-0 text-text-muted"
+                  aria-hidden="true"
+                />
+              ) : (
+                <CaretRight
+                  size={16}
+                  weight="bold"
+                  className="shrink-0 text-text-muted"
+                  aria-hidden="true"
+                />
+              )}
+            </>
+          )}
+        </div>
+        <p className={setRowSubtitleClassName()}>
+          {presetCount} preset{presetCount === 1 ? '' : 's'}
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className={setRowUnitClassName(isExpanded)}>
       <article
-        className={`group ${presetRowClassName(forceHover, isRenaming)}`}
+        id={`library-set-${set.id}`}
+        className={`group ${presetRowClassName(forceHover, isRenaming)} ${isDragPlaceholder ? 'opacity-40' : ''}`.trim()}
         onClick={handleRowClick}
         onKeyDown={handleRowKeyDown}
         role={isRenaming ? undefined : 'button'}
@@ -422,51 +531,36 @@ export function SetRow({
       >
         <div className={PRESET_TABLE_GRID_SETS}>
           <div className="min-w-0">
-            <div className="relative min-w-0">
-              {bulkSelectionEnabled && (
+            {bulkSelectionEnabled ? (
+              <div className={presetRowNameWithCheckboxRowClassName()}>
                 <SelectionCheckbox
                   checked={isSelected}
+                  compact
                   onToggle={onToggleSelect}
                   ariaLabel={
                     isSelected ? `Deselect ${set.name}` : `Select ${set.name}`
                   }
-                  className={`absolute left-0 top-[0.5625rem] z-10 -translate-y-1/2 ${presetRowCheckboxVisibilityClassName(bulkActive)}`}
+                  className={`${presetRowCheckboxSlotClassName()} ${presetRowCheckboxNameAlignClassName()} ${presetRowCheckboxVisibilityClassName(bulkActive)}`}
                 />
-              )}
-              <div className={presetRowNameColumnClassName(bulkActive)}>
-                <div className="inline-flex max-w-full items-center gap-2">
-                  {isRenaming ? (
-                    <SetNameEditor
-                      initialName={set.name}
-                      onSave={(name) => onRenameSave?.(name)}
-                      onCancel={() => onRenameCancel?.()}
-                    />
-                  ) : (
-                    <span className={`${presetNameClassName(forceHover)} truncate`}>
-                      {set.name}
-                    </span>
-                  )}
-                  {isExpanded ? (
-                    <CaretDown
-                      size={16}
-                      weight="regular"
-                      className="shrink-0 text-text-muted"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <CaretRight
-                      size={16}
-                      weight="regular"
-                      className="shrink-0 text-text-muted"
-                      aria-hidden="true"
-                    />
-                  )}
-                </div>
-                <p className={setRowSubtitleClassName()}>
-                  {presetCount} preset{presetCount === 1 ? '' : 's'}
-                </p>
+                {renderSetTitleBlock()}
               </div>
-            </div>
+            ) : slotDragHandle ? (
+              <div className={presetRowNameWithCheckboxRowClassName()}>
+                <button
+                  type="button"
+                  {...slotDragHandleAttributes}
+                  {...slotDragHandleListeners}
+                  onClick={(event) => event.stopPropagation()}
+                  className="flex h-4 w-4 shrink-0 cursor-grab touch-none items-center justify-center bg-transparent text-text-muted active:cursor-grabbing"
+                  aria-label={`Reorder ${set.name}`}
+                >
+                  <DotsSixVertical size={16} weight="regular" aria-hidden="true" />
+                </button>
+                {renderSetTitleBlock()}
+              </div>
+            ) : (
+              renderSetTitleBlock()
+            )}
           </div>
 
           <div className={PRESET_TABLE_STATUS_CELL}>
@@ -481,46 +575,60 @@ export function SetRow({
             {formatRelativeTime(set.lastUpdated.toISOString().slice(0, 10))}
           </div>
 
-          <div className={PRESET_TABLE_ACTIONS_CELL}>
-            <Tooltip
-              content={favouriteTooltip}
-              className={presetRowActionTooltipClassName}
-            >
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onToggleFavourite()
-                }}
-                className={presetRowFavouriteButtonClassName()}
-                aria-label={favouriteTooltip}
-                aria-pressed={isFavourite}
-              >
-                <Star
-                  size={18}
-                  weight={isFavourite ? 'fill' : 'regular'}
-                  aria-hidden="true"
+          {readOnly && deviceSlotKebab ? (
+            <div className={PRESET_TABLE_ACTIONS_CELL}>
+              <div className={presetRowSecondaryActionsClassName(forceHover)}>
+                <DeviceSlotKebabMenu
+                  showUpdate={deviceSlotKebab.showUpdate}
+                  forceOpen={deviceSlotKebab.forceOpen}
+                  onItemSelect={deviceSlotKebab.onAction}
                 />
-              </button>
-            </Tooltip>
-            <div className={presetRowSecondaryActionsClassName(forceHover)}>
-              <Tooltip content="Open set editor" className={presetRowActionTooltipClassName}>
+              </div>
+            </div>
+          ) : !readOnly ? (
+            <div className={PRESET_TABLE_ACTIONS_CELL}>
+              <Tooltip
+                content={favouriteTooltip}
+                className={presetRowActionTooltipClassName}
+              >
                 <button
                   type="button"
-                  onClick={handleOpenInEditor}
-                  className={presetRowActionButtonClassName()}
-                  aria-label="Open set editor"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onToggleFavourite()
+                  }}
+                  className={presetRowFavouriteButtonClassName()}
+                  aria-label={favouriteTooltip}
+                  aria-pressed={isFavourite}
                 >
-                  <ArrowSquareOut size={18} weight="regular" aria-hidden="true" />
+                  <Star
+                    size={18}
+                    weight={isFavourite ? 'fill' : 'regular'}
+                    aria-hidden="true"
+                  />
                 </button>
               </Tooltip>
-              <SetKebabMenu
-                setId={set.id}
-                forceOpen={forceKebabOpen}
-                onItemSelect={handleSetAction}
-              />
+              <div className={presetRowSecondaryActionsClassName(forceHover)}>
+                <Tooltip content="Open set editor" className={presetRowActionTooltipClassName}>
+                  <button
+                    type="button"
+                    onClick={handleOpenInEditor}
+                    className={presetRowActionButtonClassName()}
+                    aria-label="Open set editor"
+                  >
+                    <ArrowSquareOut size={18} weight="regular" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+                <SetKebabMenu
+                  setId={set.id}
+                  forceOpen={forceKebabOpen}
+                  onItemSelect={handleSetAction}
+                />
+              </div>
             </div>
-          </div>
+          ) : readOnly ? (
+            <span aria-hidden="true" />
+          ) : null}
         </div>
       </article>
 
@@ -534,6 +642,8 @@ export function SetRow({
               onPresetAction={handleSetPresetAction}
               onReorderPresets={onReorderPresets}
               onAddPreset={() => onAddPresetToSet?.(set.id)}
+              readOnly={readOnly}
+              devicePresetSyncById={devicePresetSyncById}
             />
           </div>
         </div>

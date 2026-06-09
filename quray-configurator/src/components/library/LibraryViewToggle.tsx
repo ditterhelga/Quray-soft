@@ -1,4 +1,5 @@
 import { Cards, ListDashes, Plus } from '@phosphor-icons/react'
+import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 
 export type ListView = 'presets' | 'sets'
 
@@ -9,7 +10,7 @@ type LibraryViewToggleProps = {
 }
 
 export function libraryNewSetLinkClassName() {
-  return 'inline-flex cursor-pointer items-center gap-1.5 bg-transparent text-base font-medium text-text-secondary transition-colors duration-[120ms] hover:text-text-primary'
+  return libraryOutlinedButtonClassName()
 }
 
 export function libraryViewToggleContainerClassName() {
@@ -55,7 +56,7 @@ export function LibraryViewToggle({ value, onChange, onNewSet }: LibraryViewTogg
       </div>
       {value === 'sets' && onNewSet && (
         <button type="button" onClick={onNewSet} className={libraryNewSetLinkClassName()}>
-          <Plus size={16} weight="regular" className="shrink-0" aria-hidden="true" />
+          <Plus size={16} weight="regular" aria-hidden="true" />
           New set
         </button>
       )}

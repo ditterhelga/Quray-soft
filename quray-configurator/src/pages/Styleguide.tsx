@@ -23,6 +23,10 @@ import {
   type FilterKey,
   type LibraryFilters,
 } from '@/components/library/filterOptions'
+import { DevicePresetSlotRow } from '@/components/device/DevicePresetSlotRow'
+import { DeviceSectionHeader } from '@/components/device/DeviceSectionHeader'
+import { DeviceSetSlotRow } from '@/components/device/DeviceSetSlotRow'
+import { DeviceSlotActions } from '@/components/device/DeviceSlotActions'
 import { BulkActionBar } from '@/components/library/BulkActionBar'
 import { AddPresetPickerModal } from '@/components/library/AddPresetPickerModal'
 import { SetPickerModal } from '@/components/library/SetPickerModal'
@@ -39,6 +43,8 @@ import {
   presetRowActionTooltipClassName,
   presetRowFavouriteButtonClassName,
 } from '@/components/library/presetRowActions'
+import { PresetTableSelectAllCheckbox } from '@/components/library/PresetTableSelectAllCheckbox'
+import { presetRowNameWithCheckboxClassName } from '@/components/library/presetRowSelection'
 import { PresetTableSortHeader } from '@/components/library/PresetTableSortHeader'
 import {
   PRESET_TABLE_HEADER,
@@ -47,6 +53,7 @@ import {
   PRESET_TABLE_MIN_WIDTH_CLASS,
   PRESET_TABLE_STATUS_HEADER_CELL,
 } from '@/components/library/presetTableLayout'
+import { DEVICE_PRESET_SYNC, DEVICE_WORKING_SET } from '@/data/deviceWorkingSet'
 import { PRESETS } from '@/data/presets'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
 import { SETS } from '@/data/sets'
@@ -98,6 +105,7 @@ const TOC = [
       { id: 'bulk-selection', label: 'Bulk Selection' },
       { id: 'preset-row', label: 'Preset Row' },
       { id: 'set-row', label: 'Set Row' },
+      { id: 'device-screen', label: 'Device Screen' },
       { id: 'set-picker', label: 'Set Picker' },
       { id: 'add-preset-picker', label: 'Add Preset Picker' },
       { id: 'nav-item', label: 'Nav Item' },
@@ -923,7 +931,58 @@ export function Styleguide() {
 
               <div>
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
-                  Row with checkbox visible (bulk active)
+                  Column header checkbox
+                </p>
+                <StyleguideWidePreview>
+                  <div className={PRESET_TABLE_HEADER}>
+                    <div className={presetRowNameWithCheckboxClassName()}>
+                      <PresetTableSelectAllCheckbox
+                        selectedCount={2}
+                        totalCount={5}
+                        onSelectAll={() => undefined}
+                        onClearSelection={() => undefined}
+                      />
+                      <PresetTableSortHeader
+                        label="Name"
+                        sortKey="name"
+                        activeSortKey="name"
+                        onSort={() => undefined}
+                      />
+                    </div>
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+                    <span aria-hidden="true" />
+                    <span>Output</span>
+                    <span>Zones</span>
+                    <span>Last updated</span>
+                    <span aria-hidden="true" />
+                  </div>
+                </StyleguideWidePreview>
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  Tri-state: unchecked · indeterminate (some selected) · checked (all selected).
+                  Click from unchecked/indeterminate selects all; from checked clears all.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Row at rest (checkbox space reserved, hidden until hover)
+                </p>
+                <StyleguideWidePreview>
+                  <PresetRow
+                    preset={PRESETS[0]}
+                    isFavourite={PRESETS[0].isFavourite}
+                    onToggleFavourite={() => undefined}
+                    bulkSelectionEnabled
+                    bulkActive={false}
+                    isSelected={false}
+                    onToggleSelect={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Bulk active (all checkboxes visible)
                 </p>
                 <StyleguideWidePreview>
                   <PresetRow
@@ -939,9 +998,9 @@ export function Styleguide() {
               </div>
             </div>
             <p className="mt-6 text-sm font-light text-text-muted">
-              My Library only · hover reveals checkbox + 12px gap to name column · selecting
-              one reveals all checkboxes · name and device lines shift together · bulk bar
-              right cluster: count · Select all · Clear · Export · Send to Quray.
+              My Library only · reserved column: 16px + 16px checkbox + 12px gap before name ·
+              names never shift · hover reveals row checkbox · once any item is selected all
+              checkboxes stay visible until cleared · bulk bar unchanged.
             </p>
           </Section>
 
@@ -953,12 +1012,20 @@ export function Styleguide() {
                 </p>
                 <StyleguideWidePreview>
                   <div className={PRESET_TABLE_HEADER}>
-                    <PresetTableSortHeader
-                      label="Name"
-                      sortKey="name"
-                      activeSortKey="lastUpdated"
-                      onSort={() => undefined}
-                    />
+                    <div className={presetRowNameWithCheckboxClassName()}>
+                      <PresetTableSelectAllCheckbox
+                        selectedCount={0}
+                        totalCount={12}
+                        onSelectAll={() => undefined}
+                        onClearSelection={() => undefined}
+                      />
+                      <PresetTableSortHeader
+                        label="Name"
+                        sortKey="name"
+                        activeSortKey="lastUpdated"
+                        onSort={() => undefined}
+                      />
+                    </div>
                     <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                     <span>Output</span>
@@ -1229,7 +1296,15 @@ export function Styleguide() {
                 </p>
                 <StyleguideWidePreview>
                   <div className={PRESET_TABLE_HEADER_SETS}>
-                    <span>Name</span>
+                    <div className={presetRowNameWithCheckboxClassName()}>
+                      <PresetTableSelectAllCheckbox
+                        selectedCount={0}
+                        totalCount={4}
+                        onSelectAll={() => undefined}
+                        onClearSelection={() => undefined}
+                      />
+                      <span>Name</span>
+                    </div>
                     <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span>Last updated</span>
                     <span aria-hidden="true" />
@@ -1315,6 +1390,139 @@ export function Styleguide() {
               checkbox in left slot · star on set rows only · set status aggregated from member
               sync states · inner presets show per-member status, not global · bare rows with
               dividers, drag-reorder · + Add preset opens Add Preset Picker.
+            </p>
+          </Section>
+
+          <Section id="device-screen" title="Device Screen">
+            <div className="space-y-10">
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Status chips (on device)
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Tooltip content="On device">
+                    <StatusChip status="current" />
+                  </Tooltip>
+                  <Tooltip content="Needs sync">
+                    <StatusChip status="needs-sync" />
+                  </Tooltip>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Bulk bar (selection active)
+                </p>
+                <StyleguideWidePreview>
+                  <DeviceSectionHeader
+                    bulkActive
+                    selectedCount={2}
+                    totalCount={5}
+                    onSelectAll={() => undefined}
+                    onClear={() => undefined}
+                    onRemoveSelected={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Preset slot — drag handle + needs sync
+                </p>
+                <StyleguideWidePreview>
+                  <DevicePresetSlotRow
+                    preset={PRESETS[4]}
+                    sequenceIndex={1}
+                    deviceSyncStatus="needs-sync"
+                    bulkActive={false}
+                    isSelected={false}
+                    forceHover
+                    onEdit={() => undefined}
+                    onRemove={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Set slot — bulk selected
+                </p>
+                <StyleguideWidePreview>
+                  <DeviceSetSlotRow
+                    set={SETS[1]}
+                    sequenceIndex={0}
+                    presetsById={new Map(PRESETS.map((preset) => [preset.id, preset]))}
+                    devicePresetSyncById={
+                      new Map(
+                        Object.entries(DEVICE_PRESET_SYNC) as [string, 'current' | 'needs-sync'][],
+                      )
+                    }
+                    deviceSyncStatus="needs-sync"
+                    isExpanded={false}
+                    bulkActive
+                    isSelected
+                    forceHover
+                    onToggleExpand={() => undefined}
+                    onEdit={() => undefined}
+                    onRemove={() => undefined}
+                    onEditInnerPreset={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Expanded set — nested inner presets
+                </p>
+                <StyleguideWidePreview>
+                  <DeviceSetSlotRow
+                    set={SETS[1]}
+                    sequenceIndex={0}
+                    presetsById={new Map(PRESETS.map((preset) => [preset.id, preset]))}
+                    devicePresetSyncById={
+                      new Map(
+                        Object.entries(DEVICE_PRESET_SYNC) as [string, 'current' | 'needs-sync'][],
+                      )
+                    }
+                    deviceSyncStatus="needs-sync"
+                    isExpanded
+                    bulkActive={false}
+                    isSelected={false}
+                    onToggleExpand={() => undefined}
+                    onEdit={() => undefined}
+                    onRemove={() => undefined}
+                    onEditInnerPreset={() => undefined}
+                  />
+                </StyleguideWidePreview>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Inline slot actions
+                </p>
+                <div className="inline-flex items-center gap-6 rounded-lg border border-border bg-bg-active px-4 py-3">
+                  <DeviceSlotActions
+                    variant="set"
+                    forceHover
+                    onEdit={() => undefined}
+                    onRemove={() => undefined}
+                  />
+                  <DeviceSlotActions
+                    variant="preset"
+                    forceHover
+                    onEdit={() => undefined}
+                    onRemove={() => undefined}
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="mt-6 text-sm font-light text-text-muted">
+              My Quray slot list · no column headers · light seq numbers (24px) anchor each row ·
+              flat rows with dividers (no cards) · leading: checkbox → drag → seq →
+              name · set slots show preset count + caret; preset slots single-line · expanded inner
+              presets indented under parent name column · compact inner rows (py-3, text-sm names) with status
+              aligned to parent set column · dnd-kit drag reorder · hover inline actions · bulk bar on selection only. Mock order:{' '}
+              {DEVICE_WORKING_SET.length} interleaved slots.
             </p>
           </Section>
 
@@ -1439,7 +1647,15 @@ export function Styleguide() {
                   </div>
                   <div className={presetListTableHeaderClassName()}>
                     <div className={PRESET_TABLE_HEADER}>
-                      <span>Name</span>
+                      <div className={presetRowNameWithCheckboxClassName()}>
+                        <PresetTableSelectAllCheckbox
+                          selectedCount={2}
+                          totalCount={12}
+                          onSelectAll={() => undefined}
+                          onClearSelection={() => undefined}
+                        />
+                        <span>Name</span>
+                      </div>
                       <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                       <span aria-hidden="true" />
                       <span>Output</span>

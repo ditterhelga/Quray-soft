@@ -1,4 +1,5 @@
 import { DownloadSimple, UploadSimple } from '@phosphor-icons/react'
+import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 
 type BulkActionBarProps = {
   selectedCount: number
@@ -22,11 +23,11 @@ export function bulkActionBarClearClassName() {
 }
 
 export function bulkActionBarPrimaryButtonClassName() {
-  return 'inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 text-sm font-light text-text-primary transition-[filter] duration-[120ms] hover:brightness-110'
+  return 'inline-flex h-12 cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 text-sm font-light text-text-primary transition-[filter] duration-[120ms] hover:brightness-110'
 }
 
 export function bulkActionBarSecondaryButtonClassName() {
-  return 'inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border bg-bg-active px-4 text-sm font-light text-text-secondary transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary'
+  return libraryOutlinedButtonClassName()
 }
 
 export function bulkActionBarClassName() {
