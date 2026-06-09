@@ -6,7 +6,7 @@ import {
 import { tabGroupClassName } from '@/components/ui/Tab'
 import { ArrowClockwise } from '@phosphor-icons/react'
 import {
-  deviceStagedChangesClassName,
+  deviceStagedChangesListClassName,
   deviceToolbarTitleClassName,
   deviceUpdateButtonClassName,
   formatDeviceStagedChangesLabel,
@@ -26,7 +26,7 @@ export function DeviceToolbar({
   updateCount,
   onUpdateQuray,
 }: DeviceToolbarProps) {
-  const stagedChangesLabel = formatDeviceStagedChangesLabel(
+  const stagedChangesParts = formatDeviceStagedChangesLabel(
     arrangementChangeCount,
     updateCount,
   )
@@ -39,8 +39,19 @@ export function DeviceToolbar({
         </nav>
 
         <div className={libraryToolbarActionsClassName()}>
-          {stagedChangesLabel && (
-            <span className={deviceStagedChangesClassName()}>{stagedChangesLabel}</span>
+          {stagedChangesParts.length > 0 && (
+            <span className={deviceStagedChangesListClassName()}>
+              {stagedChangesParts.map((part, index) =>
+                index === 0 ? (
+                  <span key={part}>{part}</span>
+                ) : (
+                  <span key={part} className="inline-flex items-center gap-x-4">
+                    <span aria-hidden="true">·</span>
+                    <span>{part}</span>
+                  </span>
+                ),
+              )}
+            </span>
           )}
           <Tooltip content="Applies your arrangement and updates modified presets on the device.">
             <span className="inline-flex">

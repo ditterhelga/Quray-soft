@@ -1,14 +1,20 @@
 export const PRESET_TABLE_GRID =
-  'grid grid-cols-[minmax(280px,1fr)_80px_32px_200px_80px_128px_140px] items-center gap-x-8'
+  'grid grid-cols-[minmax(0,1fr)_80px_32px_200px_80px_128px_140px] items-center gap-x-8'
+
+export const PRESET_TABLE_GRID_PANEL_OPEN =
+  'grid grid-cols-[minmax(0,1fr)_140px] items-center gap-x-8'
 
 export const PRESET_TABLE_GRID_SETS =
-  'grid grid-cols-[minmax(280px,1fr)_80px_128px_140px] items-center gap-x-8'
+  'grid grid-cols-[minmax(0,1fr)_80px_128px_140px] items-center gap-x-8'
 
 export const PRESET_TABLE_GRID_EXPLORE =
-  'grid grid-cols-[minmax(280px,1fr)_200px_80px_128px_140px] items-center gap-x-8'
+  'grid grid-cols-[minmax(0,1fr)_200px_80px_128px_140px] items-center gap-x-8'
 
 export const PRESET_TABLE_HEADER =
   `${PRESET_TABLE_GRID} pr-6 pl-4 text-sm font-light text-text-muted`
+
+export const PRESET_TABLE_HEADER_PANEL_OPEN =
+  `${PRESET_TABLE_GRID_PANEL_OPEN} pr-6 pl-4 text-sm font-light text-text-muted`
 
 export const PRESET_TABLE_HEADER_SETS =
   `${PRESET_TABLE_GRID_SETS} pr-6 pl-4 text-sm font-light text-text-muted`

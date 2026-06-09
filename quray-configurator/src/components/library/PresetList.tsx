@@ -16,6 +16,7 @@ import { SetRow } from '@/components/library/SetRow'
 import {
   PRESET_TABLE_HEADER,
   PRESET_TABLE_HEADER_EXPLORE,
+  PRESET_TABLE_HEADER_PANEL_OPEN,
   PRESET_TABLE_HEADER_SETS,
   PRESET_TABLE_STATUS_HEADER_CELL,
 } from '@/components/library/presetTableLayout'
@@ -56,6 +57,7 @@ type PresetListSharedProps = {
   onClearSelection: () => void
   onBulkSendToQuray: () => void
   onBulkExport: () => void
+  panelOpen?: boolean
 } & SetListProps
 
 type PresetListProps = PresetListSharedProps
@@ -78,13 +80,18 @@ export function PresetListStickyHeader({
   onClearSelection,
   onBulkSendToQuray,
   onBulkExport,
+  panelOpen = false,
   view,
   onViewChange,
   onNewSet,
 }: PresetListStickyHeaderProps) {
   const selectedCount = selectedIds.size
   const tableHeaderClassName =
-    variant === 'explore' ? PRESET_TABLE_HEADER_EXPLORE : PRESET_TABLE_HEADER
+    panelOpen
+      ? PRESET_TABLE_HEADER_PANEL_OPEN
+      : variant === 'explore'
+        ? PRESET_TABLE_HEADER_EXPLORE
+        : PRESET_TABLE_HEADER
   const effectiveView = variant === 'explore' ? 'presets' : view
   const listCount = effectiveView === 'sets' ? sets.length : presets.length
   const showViewToggle = variant !== 'explore'
@@ -178,23 +185,27 @@ export function PresetListStickyHeader({
               onSort={onSortChange}
             />
           </div>
-          {variant === 'library' && (
+          {!panelOpen && variant === 'library' && (
             <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
           )}
-          {variant === 'library' && <span aria-hidden="true" />}
-          <span>Output</span>
-          <PresetTableSortHeader
-            label="Zones"
-            sortKey="zones"
-            activeSortKey={sortKey}
-            onSort={onSortChange}
-          />
-          <PresetTableSortHeader
-            label="Last updated"
-            sortKey="lastUpdated"
-            activeSortKey={sortKey}
-            onSort={onSortChange}
-          />
+          {!panelOpen && variant === 'library' && <span aria-hidden="true" />}
+          {!panelOpen && <span>Output</span>}
+          {!panelOpen && (
+            <PresetTableSortHeader
+              label="Zones"
+              sortKey="zones"
+              activeSortKey={sortKey}
+              onSort={onSortChange}
+            />
+          )}
+          {!panelOpen && (
+            <PresetTableSortHeader
+              label="Last updated"
+              sortKey="lastUpdated"
+              activeSortKey={sortKey}
+              onSort={onSortChange}
+            />
+          )}
           <span aria-hidden="true" />
         </div>
       </div>
@@ -232,6 +243,7 @@ export function PresetListBody({
   onSetPresetAction = () => undefined,
   onAddPresetToSet = () => undefined,
   view,
+  panelOpen = false,
 }: PresetListBodyProps) {
   const bulkActive = bulkSelectionEnabled && selectedIds.size > 0
   const presetsById = useMemo(
@@ -308,6 +320,7 @@ export function PresetListBody({
           bulkActive={bulkActive}
           isSelected={selectedIds.has(preset.id)}
           onToggleSelect={() => onToggleSelect(preset.id)}
+          panelOpen={panelOpen}
         />
       ))}
       </div>

@@ -1,15 +1,15 @@
-import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { DeviceSettingsModal } from '@/components/DeviceSettingsModal'
 import {
   DeviceSettingsProvider,
   useDeviceSettings,
 } from '@/context/DeviceSettingsContext'
+import { SidebarProvider, useSidebar } from '@/context/SidebarContext'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 
 function AppShellContent() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isCollapsed, onCollapsedChange } = useSidebar()
   const { isOpen, openDeviceSettings, closeDeviceSettings } = useDeviceSettings()
   const location = useLocation()
   const isLibraryHome = location.pathname === '/'
@@ -19,7 +19,7 @@ function AppShellContent() {
       <div className="flex h-screen min-h-0 overflow-hidden bg-bg-main">
         <Sidebar
           isCollapsed={isCollapsed}
-          onCollapsedChange={setIsCollapsed}
+          onCollapsedChange={onCollapsedChange}
           onOpenDeviceSettings={openDeviceSettings}
         />
         <div className="flex min-h-0 flex-1 flex-col bg-bg-base">
@@ -37,7 +37,9 @@ function AppShellContent() {
 export function AppShell() {
   return (
     <DeviceSettingsProvider>
-      <AppShellContent />
+      <SidebarProvider>
+        <AppShellContent />
+      </SidebarProvider>
     </DeviceSettingsProvider>
   )
 }

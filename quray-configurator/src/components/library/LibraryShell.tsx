@@ -3,6 +3,10 @@ import { ActiveFilterBar } from '@/components/library/ActiveFilterBar'
 import { LibraryFiltersRow } from '@/components/library/LibraryFiltersRow'
 import { LibraryToolbar, type LibraryTab } from '@/components/library/LibraryToolbar'
 import {
+  libraryMainColumnClassName,
+  libraryPageWithDetailPanelClassName,
+} from '@/components/library/presetDetailPanelLayout'
+import {
   EXPLORE_FILTER_KEYS,
   hasActiveFilters,
   LIBRARY_FILTER_KEYS,
@@ -16,6 +20,8 @@ type LibraryShellProps = {
   stickyHeader?: ReactNode
   /** Preset rows. */
   children?: ReactNode
+  /** Full-height detail panel rendered beside the main column (library tab only). */
+  detailPanel?: ReactNode
   activeTab: LibraryTab
   onActiveTabChange: (tab: LibraryTab) => void
   filters: LibraryFilters
@@ -44,12 +50,12 @@ type LibraryShellProps = {
  *    ├─ div.mt-8 > stickyHeader       (toggle + column headers)
  *    └─ children                      (preset rows)
  *
- * Spacing from gradient bottom to toggle:
- *   pb-8 (32px) + mt-8 (32px) = 64px — with or without filter pills.
+ * With detailPanel: horizontal flex — main column (scrollable) + 360px panel.
  */
 export function LibraryShell({
   stickyHeader,
   children,
+  detailPanel,
   activeTab,
   onActiveTabChange,
   filters,
@@ -67,14 +73,8 @@ export function LibraryShell({
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
   const hasFilterPills = hasActiveFilters(filters, onlyFavourites, filterKeys)
 
-  return (
-    <div className="bg-bg-base">
-
-      {/* ── GRADIENT ZONE ─────────────────────────────────────────────────────
-          Header, tabs, search/filters, and active pills when present.
-          pb-8 = 32px below the last element (filter row or pills).
-          mt-5 on pills = 20px gap below the filter row.
-      ──────────────────────────────────────────────────────────────────────── */}
+  const pageContent = (
+    <div className="min-w-0 w-full max-w-full bg-bg-base">
       <div className="hero-glow pb-8">
         <Header />
         <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} onNewPreset={onNewPreset} />
@@ -106,14 +106,23 @@ export function LibraryShell({
           </div>
         )}
       </div>
-      {/* ── END GRADIENT ZONE ─────────────────────────────────────────────── */}
 
       <div className="mt-8">
         {stickyHeader}
       </div>
 
       {children}
+    </div>
+  )
 
+  if (!detailPanel) {
+    return pageContent
+  }
+
+  return (
+    <div className={libraryPageWithDetailPanelClassName()}>
+      <div className={libraryMainColumnClassName()}>{pageContent}</div>
+      {detailPanel}
     </div>
   )
 }

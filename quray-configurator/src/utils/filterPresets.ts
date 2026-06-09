@@ -33,7 +33,7 @@ function matchesSearch(
     return (preset.tags ?? []).some((tag) => tag.toLowerCase().includes(normalized))
   }
 
-  return preset.targetDevices.some((device) =>
+  return preset.devices.some((device) =>
     device.toLowerCase().includes(normalized),
   )
 }
@@ -67,7 +67,7 @@ function matchesDevice(preset: Preset, selected: string[]) {
     .map(resolveDeviceLabel)
     .filter((label): label is string => label !== undefined)
 
-  return preset.targetDevices.some((device) => selectedLabels.includes(device))
+  return preset.devices.some((device) => selectedLabels.includes(device))
 }
 
 function matchesTags(preset: Preset, selected: string[]) {

@@ -2,17 +2,32 @@ export type SyncStatus = 'on-quray' | 'modified' | 'not-synced'
 
 export type OutputType = 'MIDI Note' | 'MIDI CC' | 'CV'
 
+export type PresetZoneOutputType = 'Note' | 'CC' | 'CV'
+
+export interface PresetZone {
+  id: string
+  name: string
+  color: string
+  outputType: PresetZoneOutputType
+  axis: string
+  paramLabel: string
+}
+
 export interface Preset {
   id: string
   name: string
   tags?: string[]
-  targetDevices: string[]
+  devices: string[]
+  /** @deprecated Use devices */
+  targetDevices?: string[]
   outputTypes: OutputType[]
   zoneCount: number
+  zones: PresetZone[]
   lastUpdated: string        // ISO date string e.g. '2026-05-28'
   syncStatus: SyncStatus
   isFavourite: boolean
-  setIds: string[]           // IDs of PresetSets this preset belongs to
+  /** @deprecated Derive set membership from sets data at render time */
+  setIds?: string[]
   notes?: string
 }
 

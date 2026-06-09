@@ -1,5 +1,5 @@
 export function libraryListBodyClassName() {
-  return 'px-8 pb-8'
+  return 'min-w-0 w-full max-w-full px-8 pb-8'
 }
 
 /** 32px below the Presets/Sets toggle row → gap to column headers. */
@@ -8,7 +8,7 @@ export function presetListToolbarClassName() {
 }
 
 export function presetListTableHeaderClassName() {
-  return 'px-8'
+  return 'min-w-0 w-full max-w-full px-8'
 }
 
 /** @deprecated Use presetListTableHeaderClassName */

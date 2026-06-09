@@ -50,6 +50,35 @@ export function getSyncStatusLabel(status: StatusChipValue) {
   return STATUS_CHIP_META[status].label
 }
 
+const PRESET_SYNC_STATUS_META: Record<
+  SyncStatus,
+  {
+    label: string
+    Icon: ComponentType<SVGProps<SVGSVGElement>>
+    iconClassName: string
+  }
+> = {
+  'on-quray': {
+    label: 'On device',
+    Icon: StatusOnIcon,
+    iconClassName: 'text-status-positive',
+  },
+  modified: {
+    label: 'Needs sync',
+    Icon: StatusModifiedIcon,
+    iconClassName: 'text-status-progress',
+  },
+  'not-synced': {
+    label: 'Not on device',
+    Icon: StatusNoneIcon,
+    iconClassName: 'text-status-neutral',
+  },
+}
+
+export function getPresetSyncStatusMeta(status: SyncStatus) {
+  return PRESET_SYNC_STATUS_META[status]
+}
+
 export function StatusChip({ status }: { status: StatusChipValue }) {
   const meta = STATUS_CHIP_META[status]
   const Icon = meta.Icon

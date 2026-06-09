@@ -43,56 +43,62 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      className={`flex h-full min-h-0 shrink-0 flex-col overflow-x-visible border-r border-border-panel bg-bg-sidebar transition-[width] duration-[250ms] ease-in-out ${
+      className={`flex h-full min-h-0 shrink-0 flex-col overflow-x-visible border-r border-border-panel bg-bg-sidebar transition-all duration-200 ease-in-out ${
         isCollapsed ? 'w-[64px]' : 'w-[264px]'
       }`}
     >
       <div
-        className={`relative flex h-[72px] shrink-0 items-center ${
-          isCollapsed ? 'justify-center' : 'justify-between pl-6 pr-6'
+        className={`relative flex h-[72px] shrink-0 items-center transition-all duration-200 ease-in-out ${
+          isCollapsed ? 'px-0' : 'px-6'
         }`}
       >
-        <div
-          className={`flex items-center text-text-primary transition-opacity duration-[250ms] ease-in-out ${
-            isCollapsed
-              ? 'pointer-events-none absolute opacity-0'
-              : 'opacity-100'
-          }`}
-        >
-          <QurayLogo className="block shrink-0" aria-label="Quray" />
+        <div className="relative min-w-0 flex-1 self-stretch">
+          <div
+            aria-hidden={isCollapsed}
+            className={`absolute inset-y-0 flex items-center text-text-primary transition-all duration-200 ease-in-out ${
+              isCollapsed
+                ? 'pointer-events-none left-1/2 -translate-x-1/2 translate-y-1 opacity-0'
+                : 'left-0 translate-x-0 translate-y-1 opacity-100'
+            }`}
+          >
+            <QurayLogo className="block shrink-0" aria-label="Quray" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onCollapsedChange(false)}
+            aria-label="Expand sidebar"
+            tabIndex={isCollapsed ? 0 : -1}
+            className={`absolute inset-y-0 flex cursor-pointer items-center text-text-primary transition-all duration-200 ease-in-out hover:text-text-secondary ${
+              isCollapsed
+                ? 'left-1/2 -translate-x-1/2 translate-y-1 opacity-100'
+                : 'pointer-events-none left-0 translate-x-0 translate-y-1 opacity-0'
+            }`}
+          >
+            <QurayLogoShort className="block shrink-0" aria-hidden="true" />
+          </button>
         </div>
 
         <button
           type="button"
           onClick={() => onCollapsedChange(true)}
-          className={`flex cursor-pointer items-center text-text-primary transition-[opacity,color] duration-[250ms] ease-in-out hover:text-text-secondary ${
-            isCollapsed
-              ? 'pointer-events-none absolute opacity-0'
-              : 'opacity-100'
-          }`}
           aria-label="Collapse sidebar"
+          aria-hidden={isCollapsed}
           tabIndex={isCollapsed ? -1 : 0}
+          className={`flex shrink-0 cursor-pointer items-center overflow-hidden text-text-primary transition-all duration-200 ease-in-out hover:text-text-secondary ${
+            isCollapsed
+              ? 'pointer-events-none ml-0 w-0 min-w-0 opacity-0'
+              : 'ml-3 w-5 opacity-100'
+          }`}
         >
           <CloseBarIcon className="block shrink-0" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onCollapsedChange(false)}
-          className={`flex cursor-pointer items-center text-text-primary transition-[opacity,color] duration-[250ms] ease-in-out hover:text-text-secondary ${
-            isCollapsed ? 'opacity-100' : 'pointer-events-none absolute opacity-0'
-          }`}
-          aria-label="Expand sidebar"
-          tabIndex={isCollapsed ? 0 : -1}
-        >
-          <QurayLogoShort className="block shrink-0" />
         </button>
       </div>
 
       <Divider />
 
       <nav
-        className={`mt-8 shrink-0 flex flex-col gap-4 transition-[padding] duration-[250ms] ease-in-out ${
+        className={`mt-8 shrink-0 flex flex-col gap-4 transition-all duration-200 ease-in-out ${
           isCollapsed ? 'px-2' : 'px-4'
         }`}
       >

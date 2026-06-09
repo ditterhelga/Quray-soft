@@ -11,13 +11,13 @@ export function createBlankPreset(existingNames: Set<string>): Preset {
   return {
     id: createPresetId(),
     name,
-    targetDevices: [],
+    devices: [],
     outputTypes: [],
     zoneCount: 0,
+    zones: [],
     lastUpdated: todayIsoDate(),
     syncStatus: 'not-synced',
     isFavourite: false,
-    setIds: [],
   }
 }
 

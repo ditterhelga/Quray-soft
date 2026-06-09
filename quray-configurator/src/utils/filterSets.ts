@@ -71,7 +71,7 @@ function matchesSetDevice(
     .filter((label): label is string => label !== undefined)
 
   return getMemberPresets(set, presetsById).some((preset) =>
-    preset.targetDevices.some((device) => selectedLabels.includes(device)),
+    preset.devices.some((device) => selectedLabels.includes(device)),
   )
 }
 

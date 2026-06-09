@@ -12,6 +12,7 @@ import {
   PRESET_TABLE_ACTIONS_CELL,
   PRESET_TABLE_GRID,
   PRESET_TABLE_GRID_EXPLORE,
+  PRESET_TABLE_GRID_PANEL_OPEN,
   PRESET_TABLE_GRID_SETS,
   PRESET_TABLE_OUTPUT_CELL,
   PRESET_TABLE_STATUS_CELL,
@@ -174,7 +175,7 @@ function PresetNameColumn({
     variant === 'explore' ? (
       <TagNames tags={preset.tags ?? []} />
     ) : (
-      <DeviceNames devices={preset.targetDevices} />
+      <DeviceNames devices={preset.devices} />
     )
 
   if (bulkSelectionEnabled && bulkActive) {
@@ -345,6 +346,7 @@ type PresetRowProps = {
   slotDragHandle?: boolean
   slotDragHandleAttributes?: DraggableAttributes
   slotDragHandleListeners?: SyntheticListenerMap
+  panelOpen?: boolean
 }
 
 export function PresetRow({
@@ -379,6 +381,7 @@ export function PresetRow({
   slotDragHandle = false,
   slotDragHandleAttributes,
   slotDragHandleListeners,
+  panelOpen = false,
 }: PresetRowProps) {
   function handleRowClick() {
     if (isRenaming || readOnly) {
@@ -425,10 +428,7 @@ export function PresetRow({
   }
 
   const favouriteTooltip = isFavourite ? 'Remove from favourites' : 'Add to favourites'
-  const rowAriaLabel =
-    variant === 'explore'
-      ? `Add ${preset.name} to My Library`
-      : `Open preset ${preset.name}`
+  const rowAriaLabel = `Open preset ${preset.name}`
 
   const dragStateClassName = isDragPlaceholder
     ? 'opacity-40'
@@ -437,11 +437,13 @@ export function PresetRow({
       : ''
 
   const gridClassName =
-    variant === 'explore'
-      ? PRESET_TABLE_GRID_EXPLORE
-      : showZones
-        ? PRESET_TABLE_GRID
-        : PRESET_TABLE_GRID_SETS
+    panelOpen
+      ? PRESET_TABLE_GRID_PANEL_OPEN
+      : variant === 'explore'
+        ? PRESET_TABLE_GRID_EXPLORE
+        : showZones
+          ? PRESET_TABLE_GRID
+          : PRESET_TABLE_GRID_SETS
 
   const statusChipValue: StatusChipValue = deviceSyncStatus
     ?? (memberSyncStatus
@@ -476,15 +478,15 @@ export function PresetRow({
           />
         </div>
 
-        {variant === 'library' && (
+        {!panelOpen && variant === 'library' && (
           <div className={PRESET_TABLE_STATUS_CELL}>
             <StatusChipCell status={statusChipValue} />
           </div>
         )}
 
-        {showOutput && variant === 'library' && <div aria-hidden="true" />}
+        {!panelOpen && showOutput && variant === 'library' && <div aria-hidden="true" />}
 
-        {showOutput && (
+        {!panelOpen && showOutput && (
           <div className={PRESET_TABLE_OUTPUT_CELL}>
             {preset.outputTypes.map((outputType) => (
               <OutputChip key={outputType} label={formatOutputLabel(outputType)} />
@@ -492,15 +494,17 @@ export function PresetRow({
           </div>
         )}
 
-        {showZones && (
+        {!panelOpen && showZones && (
           <div>
             <ZoneBadge count={preset.zoneCount} />
           </div>
         )}
 
-        <div className={presetRelativeTimeClassName()}>
-          {formatRelativeTime(preset.lastUpdated)}
-        </div>
+        {!panelOpen && (
+          <div className={presetRelativeTimeClassName()}>
+            {formatRelativeTime(preset.lastUpdated)}
+          </div>
+        )}
 
         {readOnly && deviceSlotKebab ? (
           <div className={PRESET_TABLE_ACTIONS_CELL}>

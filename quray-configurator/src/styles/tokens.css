@@ -13,7 +13,7 @@
   /* Backgrounds */
   --color-bg-base: #151621;
   --color-bg-surface: #13131F;
-  --color-bg-elevated: ;
+  --color-bg-elevated: #1E1F30;
   --color-bg-sidebar: #151621;
   --color-bg-main: #151621;
   --color-bg-active: #202132;
@@ -82,6 +82,15 @@
 }
 
 @layer base {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   html,
   body,
   #root {

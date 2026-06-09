@@ -38,6 +38,8 @@ import {
   presetListToolbarClassName,
 } from '@/components/library/libraryLayout'
 import { PresetRow } from '@/components/library/PresetRow'
+import { PresetDetailPanel } from '@/components/library/PresetDetailPanel'
+import { FanVisualization } from '@/components/library/FanVisualization'
 import {
   presetRowActionButtonClassName,
   presetRowActionTooltipClassName,
@@ -57,7 +59,7 @@ import { DEVICE_PRESET_SYNC, DEVICE_WORKING_SET } from '@/data/deviceWorkingSet'
 import { PRESETS } from '@/data/presets'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
 import { SETS } from '@/data/sets'
-import { getSetPresetIds } from '@/utils/setMembers'
+import { getSetPresetIds, getSetsContainingPreset } from '@/utils/setMembers'
 import {
   OutputChip,
   ZoneBadge,
@@ -104,6 +106,8 @@ const TOC = [
       { id: 'view-toggle', label: 'View Toggle' },
       { id: 'bulk-selection', label: 'Bulk Selection' },
       { id: 'preset-row', label: 'Preset Row' },
+      { id: 'fan-visualization', label: 'Fan Visualization' },
+      { id: 'preset-detail-panel', label: 'Preset Detail Panel' },
       { id: 'set-row', label: 'Set Row' },
       { id: 'device-screen', label: 'Device Screen' },
       { id: 'set-picker', label: 'Set Picker' },
@@ -1286,6 +1290,56 @@ export function Styleguide() {
               star/open tooltips above icons (centered, font-light muted text) · kebab
               Duplicate/Rename (inline edit, no modal) · row is clickable except during rename.
             </p>
+          </Section>
+
+          <Section id="fan-visualization" title="Fan Visualization">
+            <div>
+              <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                Quray sensor field · zone sectors
+              </p>
+              <StyleguideWidePreview>
+                <div className="max-w-[360px] overflow-hidden rounded-lg border border-border bg-bg-surface">
+                  <FanVisualization zones={PRESETS[0].zones} />
+                </div>
+              </StyleguideWidePreview>
+              <p className="mt-4 text-sm font-light text-text-muted">
+                SVG viewBox 0 0 360 220 · pt-6 top padding · 140° fan arc from bottom-center ·
+                bg-elevated background
+                ring with border stroke · zone colors at 80% opacity · 1px bg-base separators.
+              </p>
+            </div>
+          </Section>
+
+          <Section id="preset-detail-panel" title="Preset Detail Panel">
+            <div>
+              <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                Fan · name · metadata · accordion · pinned footer
+              </p>
+              <StyleguideWidePreview>
+                <div className="flex h-[32rem] justify-end overflow-hidden rounded-lg border border-border">
+                  <PresetDetailPanel
+                    preset={PRESETS[0]}
+                    memberSets={getSetsContainingPreset(SETS, PRESETS[0].id)}
+                    isFavourite={PRESETS[0].isFavourite}
+                    onToggleFavourite={() => undefined}
+                    onClose={() => undefined}
+                    onOpenInEditor={() => undefined}
+                    onSendToQuray={() => undefined}
+                    onNavigateToSet={() => undefined}
+                    onDuplicate={() => undefined}
+                    onRename={() => undefined}
+                    onAddToSet={() => undefined}
+                    onExport={() => undefined}
+                    onDelete={() => undefined}
+                  />
+                </div>
+              </StyleguideWidePreview>
+              <p className="mt-4 text-sm font-light text-text-muted">
+                360px column · close (absolute top-right) · fan visualization · star + name row ·
+                metadata grid with labeled status row · collapsed zones accordion · in-sets rows ·
+                pinned footer with Open in editor, Send to Quray, and icon actions.
+              </p>
+            </div>
           </Section>
 
           <Section id="set-row" title="Set Row">

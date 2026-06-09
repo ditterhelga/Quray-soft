@@ -3,6 +3,7 @@ import {
   PresetListStickyHeader,
   PresetListBody,
 } from '@/components/library/PresetList'
+import { PresetDetailPanel } from '@/components/library/PresetDetailPanel'
 import type { ListView } from '@/components/library/PresetList'
 import { LibraryShell } from '@/components/library/LibraryShell'
 import type { LibraryTab } from '@/components/library/LibraryToolbar'
@@ -32,6 +33,7 @@ import {
   createSetMember,
   getSetMember,
   getSetPresetIds,
+  getSetsContainingPreset,
   presetReferencedInSets,
   removeSetMember,
   reorderSetMembers,
@@ -46,6 +48,7 @@ import {
   type SortKey,
 } from '@/utils/sortPresets'
 import { consumeLibrarySetFocus } from '@/utils/deviceNavigation'
+import { useSidebar } from '@/context/SidebarContext'
 
 type ToastState = {
   message: string
@@ -88,12 +91,61 @@ export function Library() {
   const [setPicker, setSetPicker] = useState<SetPickerState>(null)
   const [addPresetPickerSetId, setAddPresetPickerSetId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [view, setView] = useState<ListView>('presets')
   const pendingSetFocus = useRef(consumeLibrarySetFocus())
+  const wasAutoCollapsed = useRef(false)
+  const { isCollapsed, onCollapsedChange } = useSidebar()
 
   const dismissToast = useCallback(() => {
     setToast(null)
   }, [])
+
+  useEffect(() => {
+    if (selectedPresetId && window.innerWidth < 1280) {
+      if (!isCollapsed) {
+        onCollapsedChange(true)
+        wasAutoCollapsed.current = true
+      }
+    }
+
+    if (!selectedPresetId && wasAutoCollapsed.current) {
+      onCollapsedChange(false)
+      wasAutoCollapsed.current = false
+    }
+  }, [selectedPresetId, isCollapsed, onCollapsedChange])
+
+  useEffect(() => {
+    function handleResize() {
+      if (selectedPresetId && window.innerWidth < 1280 && !isCollapsed) {
+        onCollapsedChange(true)
+        wasAutoCollapsed.current = true
+      }
+
+      if (window.innerWidth >= 1280 && wasAutoCollapsed.current) {
+        onCollapsedChange(false)
+        wasAutoCollapsed.current = false
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [selectedPresetId, isCollapsed, onCollapsedChange])
+
+  useEffect(() => {
+    if (!selectedPresetId) {
+      return
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSelectedPresetId(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [selectedPresetId])
 
   useEffect(() => {
     const setId = pendingSetFocus.current
@@ -181,6 +233,7 @@ export function Library() {
     setOpenFilterAnchor(null)
     setSelectedIds(new Set())
     setExpandedSetIds(new Set())
+    setSelectedPresetId(null)
   }
 
   function handleViewChange(nextView: ListView) {
@@ -189,6 +242,7 @@ export function Library() {
     }
 
     setSelectedIds(new Set())
+    setSelectedPresetId(null)
     setView(nextView)
   }
 
@@ -260,6 +314,10 @@ export function Library() {
       setRenamingPresetId(null)
     }
 
+    if (selectedPresetId === presetId) {
+      setSelectedPresetId(null)
+    }
+
     setDeleteConfirmPresetId(null)
   }
 
@@ -284,7 +342,61 @@ export function Library() {
   }
 
   function handlePresetRowClick(presetId: string) {
-    console.log('Open preset', presetId)
+    setSelectedPresetId((current) => (current === presetId ? null : presetId))
+  }
+
+  function handleOpenPresetInEditor(presetId: string) {
+    const preset = presets.find((entry) => entry.id === presetId)
+    setToast({
+      message: preset ? `Opening ${preset.name} in editor…` : 'Opening preset in editor…',
+    })
+  }
+
+  function handleSendPresetToQuray(presetId: string) {
+    const preset = presets.find((entry) => entry.id === presetId)
+    setToast({
+      message: preset ? `Sending ${preset.name} to Quray…` : 'Sending preset to Quray…',
+    })
+  }
+
+  function handleNavigateToSet(setId: string) {
+    setView('sets')
+    setExpandedSetIds(new Set([setId]))
+    setSelectedIds(new Set())
+    setSelectedPresetId(null)
+
+    requestAnimationFrame(() => {
+      document.getElementById(`library-set-${setId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    })
+  }
+
+  function handlePanelPresetAction(actionId: string, presetId: string) {
+    if (actionId === 'duplicate') {
+      handleDuplicate(presetId)
+      return
+    }
+
+    if (actionId === 'add-to-set') {
+      setSetPicker({ mode: 'add-to-set', presetId })
+      return
+    }
+
+    if (actionId === 'rename') {
+      setRenamingPresetId(presetId)
+      return
+    }
+
+    if (actionId === 'export') {
+      setToast({ message: 'Export coming soon.' })
+      return
+    }
+
+    if (actionId === 'delete') {
+      setDeleteConfirmPresetId(presetId)
+    }
   }
 
   function handleRenameSave(presetId: string, rawName: string) {
@@ -760,7 +872,7 @@ export function Library() {
     onPresetAction: handlePresetAction,
     onRenameSave: handleRenameSave,
     onRenameCancel: handleRenameCancel,
-    onRowClick: isExploreTab ? handleAddToLibrary : handlePresetRowClick,
+    onRowClick: handlePresetRowClick,
     sortKey,
     onSortChange: handleSortChange,
     bulkSelectionEnabled: !isExploreTab,
@@ -782,6 +894,7 @@ export function Library() {
     onToggleSetFavourite: toggleFavourite,
     onSetPresetAction: handleSetPresetAction,
     onAddPresetToSet: handleOpenAddPresetPicker,
+    panelOpen: view === 'presets' && selectedPresetId !== null,
   }
 
   const addPresetPickerSet = addPresetPickerSetId
@@ -803,33 +916,68 @@ export function Library() {
         ? `Delete ${deletePreset.name}? This can't be undone.`
         : ''
 
+  const selectedPreset = selectedPresetId
+    ? presetSource.find((preset) => preset.id === selectedPresetId)
+    : undefined
+
+  const listHeader = (
+    <PresetListStickyHeader
+      {...listProps}
+      view={view}
+      onViewChange={handleViewChange}
+      onNewSet={handleNewSet}
+    />
+  )
+
+  const listBody = <PresetListBody {...listProps} view={view} />
+
   return (
     <>
-      <LibraryShell
-        activeTab={activeTab}
-        onActiveTabChange={handleActiveTabChange}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        openFilter={openFilter}
-        openFilterAnchor={openFilterAnchor}
-        onOpenFilterChange={handleOpenFilterChange}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onlyFavourites={onlyFavourites}
-        onOnlyFavouritesChange={setOnlyFavourites}
-        onClearAllFilters={handleClearAllFilters}
-        onNewPreset={() => undefined}
-        stickyHeader={
-          <PresetListStickyHeader
-            {...listProps}
-            view={view}
-            onViewChange={handleViewChange}
-            onNewSet={handleNewSet}
-          />
-        }
-      >
-        <PresetListBody {...listProps} view={view} />
-      </LibraryShell>
+      <div className={selectedPreset ? 'h-full min-h-0 w-full min-w-0 overflow-x-hidden' : undefined}>
+        <LibraryShell
+          activeTab={activeTab}
+          onActiveTabChange={handleActiveTabChange}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          openFilter={openFilter}
+          openFilterAnchor={openFilterAnchor}
+          onOpenFilterChange={handleOpenFilterChange}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onlyFavourites={onlyFavourites}
+          onOnlyFavouritesChange={setOnlyFavourites}
+          onClearAllFilters={handleClearAllFilters}
+          onNewPreset={() => undefined}
+          stickyHeader={listHeader}
+          detailPanel={
+            selectedPreset ? (
+              <PresetDetailPanel
+                variant={isExploreTab ? 'explore' : 'library'}
+                preset={selectedPreset}
+                memberSets={
+                  isExploreTab
+                    ? []
+                    : getSetsContainingPreset(sets, selectedPreset.id)
+                }
+                isFavourite={favourites[selectedPreset.id] ?? selectedPreset.isFavourite}
+                onToggleFavourite={() => toggleFavourite(selectedPreset.id)}
+                onClose={() => setSelectedPresetId(null)}
+                onOpenInEditor={() => handleOpenPresetInEditor(selectedPreset.id)}
+                onAddToLibrary={() => handleAddToLibrary(selectedPreset.id)}
+                onSendToQuray={() => handleSendPresetToQuray(selectedPreset.id)}
+                onNavigateToSet={handleNavigateToSet}
+                onDuplicate={() => handlePanelPresetAction('duplicate', selectedPreset.id)}
+                onRename={() => handlePanelPresetAction('rename', selectedPreset.id)}
+                onAddToSet={() => handlePanelPresetAction('add-to-set', selectedPreset.id)}
+                onExport={() => handlePanelPresetAction('export', selectedPreset.id)}
+                onDelete={() => handlePanelPresetAction('delete', selectedPreset.id)}
+              />
+            ) : undefined
+          }
+        >
+          {listBody}
+        </LibraryShell>
+      </div>
 
       {toast && (
         <Toast

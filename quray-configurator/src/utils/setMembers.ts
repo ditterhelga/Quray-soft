@@ -1,5 +1,12 @@
 import type { Set as LibrarySet, SetMember, SetSyncStatus } from '@/types'
 
+export function getSetsContainingPreset(
+  sets: LibrarySet[],
+  presetId: string,
+): LibrarySet[] {
+  return sets.filter((set) => set.members.some((member) => member.presetId === presetId))
+}
+
 export function getSetPresetIds(set: LibrarySet): string[] {
   return set.members.map((member) => member.presetId)
 }

@@ -53,7 +53,7 @@ export function deviceStagedChangesClassName() {
 export function formatDeviceStagedChangesLabel(
   arrangementChangeCount: number,
   updateCount: number,
-): string | null {
+): string[] {
   const parts: string[] = []
 
   if (arrangementChangeCount > 0) {
@@ -66,5 +66,9 @@ export function formatDeviceStagedChangesLabel(
     parts.push(`${updateCount} modified`)
   }
 
-  return parts.length > 0 ? parts.join(' · ') : null
+  return parts
+}
+
+export function deviceStagedChangesListClassName() {
+  return `${deviceStagedChangesClassName()} inline-flex items-center gap-x-4`
 }

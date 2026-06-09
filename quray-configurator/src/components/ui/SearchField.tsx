@@ -7,7 +7,7 @@ type SearchFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
 }
 
 export function searchFieldClassName() {
-  return 'flex h-12 min-w-[240px] flex-1 items-center gap-3 rounded-lg border border-border bg-bg-base px-4'
+  return 'flex h-12 min-w-0 flex-1 items-center gap-3 rounded-lg border border-border bg-bg-base px-4'
 }
 
 export function searchFieldInputClassName() {

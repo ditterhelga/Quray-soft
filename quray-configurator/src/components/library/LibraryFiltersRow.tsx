@@ -26,7 +26,7 @@ type LibraryFiltersRowProps = {
 }
 
 export function libraryFiltersRowClassName() {
-  return 'mt-12 flex min-w-0 items-center gap-3 px-8'
+  return 'mt-12 flex min-w-0 flex-wrap items-center gap-3 px-8'
 }
 
 export function LibraryFiltersRow({
