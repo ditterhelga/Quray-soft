@@ -13,5 +13,5 @@ export function presetRowRemoveFromSetButtonClassName() {
 export const presetRowActionTooltipClassName = 'relative inline-flex shrink-0'
 
 export function libraryOutlinedButtonClassName() {
-  return 'inline-flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border bg-bg-active px-4 text-sm font-light text-text-secondary transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary'
+  return 'inline-flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border bg-bg-active px-4 text-sm font-medium text-text-secondary transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary'
 }

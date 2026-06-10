@@ -259,7 +259,7 @@ export function Sidebar({
                       <button
                         type="button"
                         onClick={() => setSelectedZoneId(zone.id)}
-                        className={`flex items-center gap-3 h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
+                        className={`flex items-center h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
                           isSelected ? 'relative' : ''
                         }`}
                       >
@@ -269,18 +269,18 @@ export function Sidebar({
                             aria-hidden="true"
                           />
                         )}
-                        <span className="w-5 shrink-0 text-base font-medium text-text-muted">
+                        <span className="mr-5 shrink-0 text-sm font-medium text-text-muted">
                           {String(index + 1).padStart(2, '0')}
                         </span>
                         <span
-                          className={`flex-1 min-w-0 truncate text-sm font-light ${
+                          className={`min-w-0 truncate text-sm font-light ${
                             isSelected ? 'text-text-primary' : 'text-text-muted'
                           }`}
                         >
                           {zone.name}
                         </span>
                         <span
-                          className="h-[10px] w-[10px] shrink-0 rounded-sm"
+                          className="ml-auto h-[10px] w-[10px] shrink-0 rounded-sm"
                           style={{ background: zone.color }}
                           aria-hidden="true"
                         />

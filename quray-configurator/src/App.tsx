@@ -14,8 +14,8 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<Library />} />
           <Route path="device" element={<Device />} />
-          <Route path="editor" element={<Editor />} />
           <Route path="explore" element={<Explore />} />
+          <Route path="editor" element={<Editor />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ArrowSquareOut,
   CaretDown,
@@ -49,6 +49,10 @@ import {
 import { PresetRow } from '@/components/library/PresetRow'
 import { PresetDetailPanel } from '@/components/library/PresetDetailPanel'
 import { FanVisualization } from '@/components/library/FanVisualization'
+import { FanCanvas } from '@/components/editor/FanCanvas'
+import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
+import { DeviceToolbar } from '@/components/device/DeviceToolbar'
+import { DeviceWorkingSetList } from '@/components/device/DeviceWorkingSetList'
 import {
   presetRowActionButtonClassName,
   presetRowActionTooltipClassName,
@@ -68,6 +72,7 @@ import { DEVICE_PRESET_SYNC, DEVICE_WORKING_SET } from '@/data/deviceWorkingSet'
 import { PRESETS } from '@/data/presets'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
 import { SETS } from '@/data/sets'
+import { getDeviceSlotId } from '@/utils/deviceSlots'
 import { getSetPresetIds, getSetsContainingPreset } from '@/utils/setMembers'
 import {
   OutputChip,
@@ -89,8 +94,9 @@ import {
   getSyncStatusLabel,
 } from '@/components/ui/StatusChip'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { Toast } from '@/components/ui/Toast'
 import { StatusPill } from '@/components/ui/StatusPill'
-import type { SyncStatus } from '@/types'
+import type { EditorZone, GesturePosition, SyncStatus } from '@/types'
 
 const TOC = [
   {
@@ -124,6 +130,11 @@ const TOC = [
       { id: 'nav-item', label: 'Nav Item' },
       { id: 'preset-setup-row', label: 'Preset Setup Row' },
       { id: 'account-row', label: 'Account Row' },
+      { id: 'fan-canvas', label: 'Fan Canvas' },
+      { id: 'zone-settings', label: 'Zone Settings' },
+      { id: 'editor-layout', label: 'Editor Layout' },
+      { id: 'fan-geometry', label: 'Fan Geometry' },
+      { id: 'device-page', label: 'Device Page' },
     ],
   },
   {
@@ -338,6 +349,234 @@ function StyleguidePresetSetupRowDemo({
         </div>
         <CaretRight size={16} className="ml-auto shrink-0 text-text-muted" />
       </div>
+    </div>
+  )
+}
+
+const STYLEGUIDE_EDITOR_ZONES: EditorZone[] = [
+  {
+    id: 'sg-z1',
+    name: 'Filter Sweep',
+    color: '#5B8EE6',
+    type: 'CC',
+    position: [true, 0.0, 0.2, 0.25, 0.9],
+  },
+  {
+    id: 'sg-z2',
+    name: 'Root Note',
+    color: '#7BB15B',
+    type: 'Note',
+    position: [true, 0.25, 0.3, 0.55, 1.0],
+  },
+  {
+    id: 'sg-z3',
+    name: 'Sub Octave',
+    color: '#CC9F2C',
+    type: 'Note',
+    position: [true, 0.55, 0.1, 0.8, 0.85],
+  },
+  {
+    id: 'sg-z4',
+    name: 'Unmapped',
+    color: '#8D95B2',
+    type: null,
+    position: [true, 0.8, 0.2, 1.0, 0.7],
+  },
+]
+
+function StyleguideFanCanvasDemo({
+  zones,
+  selectedZoneId,
+  drawMode,
+  onZoneSelect,
+  onZoneCreate,
+  onZoneUpdate,
+}: {
+  zones: EditorZone[]
+  selectedZoneId: string | null
+  drawMode: boolean
+  onZoneSelect: (id: string | null) => void
+  onZoneCreate: (position: GesturePosition) => void
+  onZoneUpdate: (id: string, position: GesturePosition) => void
+}) {
+  return (
+    <div className="h-full min-h-[360px] w-full">
+      <FanCanvas
+        zones={zones}
+        selectedZoneId={selectedZoneId}
+        drawMode={drawMode}
+        onZoneSelect={onZoneSelect}
+        onZoneCreate={onZoneCreate}
+        onZoneUpdate={onZoneUpdate}
+      />
+    </div>
+  )
+}
+
+function StyleguideZoneSettingsPanel({
+  selectedZoneId,
+  zones,
+}: {
+  selectedZoneId: string | null
+  zones: EditorZone[]
+}) {
+  const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? null
+
+  if (!selectedZone) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-5 py-4 text-sm text-text-muted">
+        Select a zone to edit
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col px-5 py-4">
+      <div className="flex items-center gap-2">
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: selectedZone.color }}
+          aria-hidden="true"
+        />
+        <h2 className="text-base text-text-primary">{selectedZone.name}</h2>
+      </div>
+
+      <section className="mt-6">
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Mapping</h3>
+        <p className="text-sm text-text-muted">Note / CC / CV configuration coming soon.</p>
+      </section>
+
+      <section className="mt-6">
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Axis</h3>
+        <p className="text-sm text-text-muted">Y / X / Entry / Exit coming soon.</p>
+      </section>
+    </div>
+  )
+}
+
+function StyleguideEditorLayoutDemo() {
+  const [zones, setZones] = useState<EditorZone[]>(STYLEGUIDE_EDITOR_ZONES)
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>('sg-z1')
+  const [drawMode, setDrawMode] = useState(false)
+
+  const handleZoneSelect = useCallback((id: string | null) => {
+    setSelectedZoneId(id)
+    if (id !== null) setDrawMode(false)
+  }, [])
+
+  const handleZoneCreate = useCallback((position: GesturePosition) => {
+    const newZone: EditorZone = {
+      id: `sg-new-${Date.now()}`,
+      name: `Zone ${zones.length + 1}`,
+      color: '#5145F2',
+      type: null,
+      position,
+    }
+    setZones((prev) => [...prev, newZone])
+    setSelectedZoneId(newZone.id)
+    setDrawMode(false)
+  }, [zones.length])
+
+  const handleZoneUpdate = useCallback((id: string, position: GesturePosition) => {
+    setZones((prev) => prev.map((zone) => (zone.id === id ? { ...zone, position } : zone)))
+  }, [])
+
+  return (
+    <div className="space-y-4">
+      <button
+        type="button"
+        onClick={() => setDrawMode((value) => !value)}
+        className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+          drawMode
+            ? 'bg-accent text-text-primary'
+            : 'border border-border bg-bg-elevated text-text-secondary'
+        }`}
+      >
+        {drawMode ? 'Drawing…' : 'Draw zone'}
+      </button>
+
+      <div className="flex h-[420px] overflow-hidden rounded-lg border border-border">
+        <main className="relative h-full min-h-0 min-w-0 flex-1">
+          <StyleguideFanCanvasDemo
+            zones={zones}
+            selectedZoneId={selectedZoneId}
+            drawMode={drawMode}
+            onZoneSelect={handleZoneSelect}
+            onZoneCreate={handleZoneCreate}
+            onZoneUpdate={handleZoneUpdate}
+          />
+        </main>
+        <aside
+          className="flex w-80 shrink-0 flex-col overflow-y-auto border-l"
+          style={{
+            borderColor: 'var(--color-border-panel)',
+            background: 'var(--color-bg-sidebar)',
+          }}
+        >
+          <StyleguideZoneSettingsPanel selectedZoneId={selectedZoneId} zones={zones} />
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function StyleguideDevicePageDemo() {
+  const [slots, setSlots] = useState(() => [...DEVICE_WORKING_SET])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [showToast, setShowToast] = useState(false)
+
+  const presetSync = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(DEVICE_PRESET_SYNC) as [string, 'current' | 'needs-sync'][],
+      ) as typeof DEVICE_PRESET_SYNC,
+    [],
+  )
+
+  return (
+    <div className="space-y-6">
+      <div className="overflow-hidden rounded-lg border border-border bg-bg-base">
+        <div className="hero-glow pb-8">
+          <DeviceToolbar
+            hasStagedChanges
+            arrangementChangeCount={1}
+            updateCount={2}
+            onUpdateQuray={() => setShowToast(true)}
+          />
+          <DeviceStatusBlock
+            status={{ usedMb: 2.1, totalMb: 8, firmwareVersion: '1.22' }}
+          />
+        </div>
+        <DeviceWorkingSetList
+          slots={slots}
+          sets={SETS}
+          presets={PRESETS}
+          presetSync={presetSync}
+          selectedIds={selectedIds}
+          onToggleSelect={(slotId) => {
+            setSelectedIds((current) => {
+              const next = new Set(current)
+              if (next.has(slotId)) next.delete(slotId)
+              else next.add(slotId)
+              return next
+            })
+          }}
+          onSelectAll={() => setSelectedIds(new Set(slots.map((slot) => getDeviceSlotId(slot))))}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onReorderSlots={setSlots}
+          onEditSet={() => undefined}
+          onEditPreset={() => undefined}
+          onRemoveSlot={() => undefined}
+          onBulkRemove={() => undefined}
+        />
+      </div>
+
+      {showToast && (
+        <Toast
+          message="Quray updated."
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
     </div>
   )
 }
@@ -1734,6 +1973,213 @@ export function Styleguide() {
               Account is optional on first run (demo works without sign-in); signing
               in protects presets from loss.
             </p>
+          </Section>
+
+          <Section id="fan-canvas" title="Fan Canvas">
+            <div className="space-y-6">
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Interactive editor canvas
+                </p>
+                <div className="h-[420px] overflow-hidden rounded-lg border border-border">
+                  <StyleguideEditorLayoutDemo />
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm font-light text-text-muted">
+                <p>
+                  <code className="font-mono text-xs text-text-secondary">FanCanvas</code> — HTML
+                  canvas fan renderer for the editor. Draws the 96° sector grid, coloured zone
+                  arc sectors, selection highlight, edge-resize, move, and drag-to-draw creation.
+                </p>
+                <p className="text-xs font-light uppercase tracking-wide text-text-primary">
+                  Props
+                </p>
+                <ul className="list-inside list-disc space-y-1 font-mono text-xs text-text-secondary">
+                  <li>zones: EditorZone[]</li>
+                  <li>selectedZoneId: string | null</li>
+                  <li>drawMode: boolean</li>
+                  <li>onZoneSelect(id: string | null): void</li>
+                  <li>onZoneCreate(position: GesturePosition): void</li>
+                  <li>onZoneUpdate(id: string, position: GesturePosition): void</li>
+                </ul>
+                <p>
+                  Visual: dark sector fill with angular/radial grid · mapped zones use zone colour
+                  at 30% fill (70% when selected) · unmapped zones show grey hatch + amber warning
+                  dot · selected zone has bright 2px outline · edge drag resizes (ew/ns cursors) ·
+                  draw mode shows dashed ghost preview.
+                </p>
+              </div>
+            </div>
+          </Section>
+
+          <Section id="zone-settings" title="Zone Settings">
+            <div className="flex flex-wrap items-start gap-8">
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Empty state
+                </p>
+                <div
+                  className="w-80 overflow-hidden rounded-lg border border-border-panel"
+                  style={{ background: 'var(--color-bg-sidebar)' }}
+                >
+                  <StyleguideZoneSettingsPanel selectedZoneId={null} zones={STYLEGUIDE_EDITOR_ZONES} />
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Zone selected
+                </p>
+                <div
+                  className="w-80 overflow-hidden rounded-lg border border-border-panel"
+                  style={{ background: 'var(--color-bg-sidebar)' }}
+                >
+                  <StyleguideZoneSettingsPanel selectedZoneId="sg-z1" zones={STYLEGUIDE_EDITOR_ZONES} />
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 space-y-3 text-sm font-light text-text-muted">
+              <p>
+                <code className="font-mono text-xs text-text-secondary">ZoneSettings</code> — right
+                panel in <code className="font-mono text-xs text-text-secondary">Editor.tsx</code>{' '}
+                (internal, not exported). 320px (
+                <code className="font-mono text-xs text-text-secondary">w-80</code>) sidebar with
+                bg-sidebar and border-panel left edge.
+              </p>
+              <p className="text-xs font-light uppercase tracking-wide text-text-primary">Props</p>
+              <ul className="list-inside list-disc space-y-1 font-mono text-xs text-text-secondary">
+                <li>selectedZoneId: string | null</li>
+                <li>zones: EditorZone[]</li>
+              </ul>
+              <p>
+                Empty: centred muted “Select a zone to edit”. Selected: colour dot + zone name (
+                <code className="font-mono text-xs text-text-secondary">text-base text-text-primary</code>
+                ), then MAPPING and AXIS sections with uppercase muted labels (
+                <code className="font-mono text-xs text-text-secondary">text-xs uppercase tracking-wide text-text-muted mb-2</code>
+                ) and placeholder body copy.
+              </p>
+            </div>
+          </Section>
+
+          <Section id="editor-layout" title="Editor Layout">
+            <StyleguideEditorLayoutDemo />
+            <p className="mt-6 text-sm font-light text-text-muted">
+              <code className="font-mono text-xs text-text-secondary">Editor.tsx</code> page shell
+              inside AppShell · left zone list lives in{' '}
+              <code className="font-mono text-xs text-text-secondary">Sidebar.tsx</code> when route
+              is <code className="font-mono text-xs text-text-secondary">/editor</code> · main
+              content is flex row:{' '}
+              <code className="font-mono text-xs text-text-secondary">FanCanvas</code> (
+              <code className="font-mono text-xs text-text-secondary">flex-1 min-w-0 h-full</code>
+              ) + <code className="font-mono text-xs text-text-secondary">ZoneSettings</code> (
+              <code className="font-mono text-xs text-text-secondary">w-80 shrink-0</code>). No
+              toolbar or duplicate zone list in the page body.
+            </p>
+          </Section>
+
+          <Section id="fan-geometry" title="Fan Geometry">
+            <div className="space-y-6 text-sm font-light text-text-muted">
+              <p>
+                Pure geometry utilities in{' '}
+                <code className="font-mono text-xs text-text-secondary">src/utils/fanGeometry.ts</code>.
+                Ported from gesture-canvas.js — no DOM, no side effects. Used by{' '}
+                <code className="font-mono text-xs text-text-secondary">FanCanvas</code>.
+              </p>
+
+              <div>
+                <p className="mb-2 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Coordinate system
+                </p>
+                <p>
+                  Logical space: x and y both 0–1. x is angular (left → right across the 96° fan).
+                  y is radial (0 = inner arc, 1 = outer arc). Canvas space uses CSS pixels; DPR
+                  scaling is handled outside these functions.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Exports
+                </p>
+                <ul className="space-y-2 font-mono text-xs text-text-secondary">
+                  <li>
+                    sectorForCanvas(canvas: {'{'} width, height {'}'}) → SectorGeometry — fan
+                    centre, radii, start/end angles for a canvas size
+                  </li>
+                  <li>logicalToCanvas(lx, ly, S) → {'{'} x, y {'}'} — logical → canvas px</li>
+                  <li>canvasToLogical(px, py, S) → {'{'} x, y {'}'} — canvas px → logical</li>
+                  <li>
+                    sectorRectPath(ctx, S, xMin, yMin, xMax, yMax) — trace arc-sector path for a
+                    zone bounding box
+                  </li>
+                  <li>clamp(value, min, max) → number</li>
+                  <li>isInsideFan(lx, ly) → boolean — true when x and y are in 0–1</li>
+                </ul>
+              </div>
+
+              <p>
+                Visual: fan originates from below the canvas bottom edge · 96° total opening · inner
+                radius clamped to at least 15% of outer radius on tall canvases · zone rectangles
+                map to arc sectors via the logical bounding box.
+              </p>
+            </div>
+          </Section>
+
+          <Section id="device-page" title="Device Page">
+            <div className="space-y-8">
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Page chrome (toolbar + status + slot list)
+                </p>
+                <StyleguideDevicePageDemo />
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Toast (undo action)
+                </p>
+                <div className="relative h-24 overflow-hidden rounded-lg border border-border bg-bg-base">
+                  <Toast
+                    message="Removed Bassline Filter Sweep from Quray."
+                    actionLabel="Undo"
+                    onAction={() => undefined}
+                    onDismiss={() => undefined}
+                    durationMs={60000}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3 text-sm font-light text-text-muted">
+              <p>
+                <code className="font-mono text-xs text-text-secondary">Device.tsx</code> composes
+                the My Quray screen: hero-glow header with toolbar and status, then the working-set
+                slot list. Slot row components are documented in Device Screen above.
+              </p>
+              <p className="text-xs font-light uppercase tracking-wide text-text-primary">Components</p>
+              <ul className="list-inside list-disc space-y-1 font-mono text-xs text-text-secondary">
+                <li>
+                  DeviceToolbar — hasStagedChanges, arrangementChangeCount, updateCount,
+                  onUpdateQuray
+                </li>
+                <li>
+                  DeviceStatusBlock — status: {'{'} usedMb, totalMb, firmwareVersion {'}'}
+                </li>
+                <li>
+                  DeviceWorkingSetList — slots, sets, presets, presetSync, selection + reorder
+                  callbacks
+                </li>
+                <li>
+                  Toast — message, onDismiss, optional actionLabel + onAction (slot removal undo)
+                </li>
+              </ul>
+              <p>
+                Visual: same hero-glow cap as Library · “My Quray” title with staged-changes label
+                and Update Quray button · capacity bar + firmware readout · flat interleaved preset/set
+                rows with dnd-kit reorder.
+              </p>
+            </div>
           </Section>
 
           <Section id="process-notes" title="Process Notes">

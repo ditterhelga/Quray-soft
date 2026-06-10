@@ -46,6 +46,33 @@ export interface Set {
   notes?: string
 }
 
+// ---------------------------------------------------------------------------
+// Editor / gesture canvas types
+// ---------------------------------------------------------------------------
+
+/**
+ * Zone position in logical space: [active, xMin, yMin, xMax, yMax].
+ * All coordinates 0–1; x = angular (left→right), y = radial (near→far).
+ */
+export type GesturePosition = [
+  active: boolean,
+  xMin: number,
+  yMin: number,
+  xMax: number,
+  yMax: number,
+]
+
+/** A single gesture zone shown on the Editor fan canvas. */
+export interface EditorZone {
+  id: string
+  name: string
+  /** Hex colour used for fills and outlines on the canvas. */
+  color: string
+  /** Output type; null = unmapped (rendered with hatching + amber warning). */
+  type: 'Note' | 'CC' | 'CV' | null
+  position: GesturePosition
+}
+
 /** @deprecated Use Set */
 export interface PresetSet {
   id: string
