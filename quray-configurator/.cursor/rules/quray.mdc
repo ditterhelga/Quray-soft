@@ -1,0 +1,17 @@
+---
+description: Quray editor screen rules
+alwaysApply: true
+---
+
+## Editor screen rules
+
+- Editor route is outside AppShell — has its own full-screen layout.
+- Left panel visual style must match Library/Device exactly:
+  same sidebar bg, same Divider component, same section label style
+  (text-sm font-light uppercase tracking-wide text-text-muted pl-6).
+- Zone color ≠ LED color. Zone color = canvas visual only.
+  LED color = preset gradient (colorA + colorB).
+- No MIDI Learn — removed from MVP scope, do not add it.
+- Scale is preset-level, not per-zone.
+- Fan canvas is SVG-based. Zones are SVG path elements (arc sectors).
+  Fan originates from bottom-center of the canvas area.

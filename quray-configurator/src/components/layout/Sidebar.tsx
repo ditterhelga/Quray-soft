@@ -3,9 +3,61 @@ import QurayLogoShort from '@/assets/icons/Quray-logo-short.svg?react'
 import CloseBarIcon from '@/assets/icons/close-bar-icon.svg?react'
 import LibraryIcon from '@/assets/icons/Library-icon.svg?react'
 import DeviceIcon from '@/assets/icons/Device-icon.svg?react'
+import StatusOnIcon from '@/assets/icons/status-on.svg?react'
+import StatusNoneIcon from '@/assets/icons/status-none.svg?react'
+import {
+  ArrowLeft,
+  CaretRight,
+  MusicNote,
+  SquaresFour,
+  WarningCircle,
+} from '@phosphor-icons/react'
+import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Divider } from '@/components/ui/Divider'
 import { AccountRow } from '@/components/layout/AccountRow'
 import { NavItem } from '@/components/layout/NavItem'
+
+const MOCK_PRESET = {
+  id: 'preset-1',
+  name: 'Bassline Filter Sweep',
+  colorA: '#A259F7',
+  colorB: '#F24E8A',
+}
+
+const mockSyncStatus = 'not-synced' as 'synced' | 'not-synced'
+const mockAutosaveStatus = 'saved' as 'saving' | 'saved' | 'error'
+
+const MOCK_ZONES = [
+  {
+    id: 'z1',
+    name: 'Filter Sweep',
+    subtitle: 'Filter Cutoff · Y axis',
+    type: 'CC',
+    color: '#5B8EE6',
+  },
+  {
+    id: 'z2',
+    name: 'Root Note',
+    subtitle: 'Pitch · Pressure',
+    type: 'Note',
+    color: '#7BB15B',
+  },
+  {
+    id: 'z3',
+    name: 'Sub Octave',
+    subtitle: 'Sub Bass · Lower arc',
+    type: 'Note',
+    color: '#CC9F2C',
+  },
+  {
+    id: 'z4',
+    name: 'Unmapped',
+    subtitle: '',
+    type: null,
+    color: '#8D95B2',
+  },
+]
 
 const RECENT_PRESETS = [
   {
@@ -41,6 +93,12 @@ export function Sidebar({
   onCollapsedChange,
   onOpenDeviceSettings,
 }: SidebarProps) {
+  const location = useLocation()
+  const isEditor = location.pathname === '/editor'
+  const navigate = useNavigate()
+
+  const [selectedZoneId, setSelectedZoneId] = useState(MOCK_ZONES[0].id)
+
   return (
     <aside
       className={`flex h-full min-h-0 shrink-0 flex-col overflow-x-visible border-r border-border-panel bg-bg-sidebar transition-all duration-200 ease-in-out ${
@@ -97,52 +155,193 @@ export function Sidebar({
 
       <Divider />
 
-      <nav
-        className={`mt-8 shrink-0 flex flex-col gap-4 transition-all duration-200 ease-in-out ${
-          isCollapsed ? 'px-2' : 'px-4'
-        }`}
-      >
-        <NavItem to="/" end label="Library" icon={LibraryIcon} isCollapsed={isCollapsed} />
-        <NavItem to="/device" label="Device" icon={DeviceIcon} isCollapsed={isCollapsed} />
-      </nav>
+      {isEditor ? (
+        isCollapsed ? (
+          <div className="min-h-0 flex-1" aria-hidden="true" />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col px-0">
+            <div className="px-4 pt-4">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="relative flex h-12 w-full cursor-pointer items-center gap-3 px-4 rounded-xl border border-transparent bg-transparent text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
+              >
+                <ArrowLeft size={20} className="shrink-0" />
+                <span>Back to Library</span>
+              </button>
+            </div>
 
-      {isCollapsed ? (
-        <div className="min-h-0 flex-1" aria-hidden="true" />
-      ) : (
-        <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Divider />
+            <div className="px-6 pb-5 pt-4">
+              <p className="text-lg font-light text-text-primary">{MOCK_PRESET.name}</p>
 
-          <section className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <h2 className="shrink-0 pl-6 text-sm font-light uppercase tracking-wide text-text-muted">
-              Recent Presets
-            </h2>
+              <div className="mt-3 flex items-center gap-1.5 text-xs text-text-muted">
+                {mockSyncStatus === 'synced' ? (
+                  <StatusOnIcon className="h-3 w-3 shrink-0 text-status-positive" />
+                ) : (
+                  <StatusNoneIcon className="h-3 w-3 shrink-0 text-status-neutral" />
+                )}
+                <span>{mockSyncStatus === 'synced' ? 'Synced' : 'Not synced'}</span>
 
-            <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-              <div className="flex flex-col gap-6 pb-4">
-                {RECENT_PRESETS.map((group) => (
-                  <div key={group.label}>
-                    <h3 className="pl-6 text-sm font-light text-text-muted">
-                      {group.label}
-                    </h3>
-                    <ul className="mt-4 flex w-full flex-col gap-3 px-3">
-                      {group.presets.map((name) => (
-                        <li key={name} className="w-full">
-                          <button
-                            type="button"
-                            className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
-                            title={name}
-                          >
-                            {name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                <span className="opacity-30">·</span>
+
+                {mockAutosaveStatus === 'saving' && <span>Saving…</span>}
+                {mockAutosaveStatus === 'saved' && <span>Autosaved</span>}
+                {mockAutosaveStatus === 'error' && (
+                  <span className="flex items-center gap-1 text-status-error">
+                    <WarningCircle size={12} />
+                    Not saved
+                  </span>
+                )}
               </div>
             </div>
-          </section>
-        </div>
+
+            <div className="mt-5">
+              <p className="mb-5 shrink-0 pl-6 text-sm font-light uppercase tracking-wide text-text-muted">
+                Preset setup
+              </p>
+
+              <div className="flex flex-col gap-3 px-4 pb-5">
+                <button
+                  type="button"
+                  className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
+                >
+                  <span
+                    className="h-5 w-5 shrink-0 rounded-full"
+                    style={{
+                      background: `linear-gradient(135deg, ${MOCK_PRESET.colorA}, ${MOCK_PRESET.colorB})`,
+                    }}
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="block text-left text-sm text-text-primary">Color</span>
+                    <span className="block text-left text-xs font-light text-text-muted">Gradient</span>
+                  </div>
+                  <CaretRight size={16} className="shrink-0 text-text-muted ml-auto" />
+                </button>
+
+                <button
+                  type="button"
+                  className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
+                >
+                  <MusicNote size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="block text-left text-sm text-text-primary">Scale</span>
+                    <span className="block text-left text-xs font-light text-text-muted">Chromatic</span>
+                  </div>
+                  <CaretRight size={16} className="shrink-0 text-text-muted ml-auto" />
+                </button>
+
+                <button
+                  type="button"
+                  className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
+                >
+                  <SquaresFour size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="block text-left text-sm text-text-primary">Layout</span>
+                    <span className="block text-left text-xs font-light text-text-muted">Freehand</span>
+                  </div>
+                  <CaretRight size={16} className="shrink-0 text-text-muted ml-auto" />
+                </button>
+              </div>
+            </div>
+
+            <section className="min-h-0 flex-1 overflow-y-auto">
+              <p className="mt-5 mb-3 shrink-0 pl-6 text-sm font-light uppercase tracking-wide text-text-muted">
+                Zones
+              </p>
+
+              <ul className="flex flex-col gap-3 px-4">
+                {MOCK_ZONES.map((zone, index) => {
+                  const isSelected = zone.id === selectedZoneId
+
+                  return (
+                    <li key={zone.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedZoneId(zone.id)}
+                        className={`flex items-center gap-3 h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
+                          isSelected ? 'relative' : ''
+                        }`}
+                      >
+                        {isSelected && (
+                          <span
+                            className="absolute -left-px top-1/2 h-[28px] w-[3px] -translate-y-1/2 bg-accent"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="w-5 shrink-0 text-base font-medium text-text-muted">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span
+                          className={`flex-1 min-w-0 truncate text-sm font-light ${
+                            isSelected ? 'text-text-primary' : 'text-text-muted'
+                          }`}
+                        >
+                          {zone.name}
+                        </span>
+                        <span
+                          className="h-[10px] w-[10px] shrink-0 rounded-sm"
+                          style={{ background: zone.color }}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          </div>
+        )
+      ) : (
+        <>
+          <nav
+            className={`mt-8 shrink-0 flex flex-col gap-4 transition-all duration-200 ease-in-out ${
+              isCollapsed ? 'px-2' : 'px-4'
+            }`}
+          >
+            <NavItem to="/" end label="Library" icon={LibraryIcon} isCollapsed={isCollapsed} />
+            <NavItem to="/device" label="Device" icon={DeviceIcon} isCollapsed={isCollapsed} />
+          </nav>
+
+          {isCollapsed ? (
+            <div className="min-h-0 flex-1" aria-hidden="true" />
+          ) : (
+            <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden">
+              <Divider />
+
+              <section className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden">
+                <h2 className="shrink-0 pl-6 text-sm font-light uppercase tracking-wide text-text-muted">
+                  Recent Presets
+                </h2>
+
+                <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+                  <div className="flex flex-col gap-6 pb-4">
+                    {RECENT_PRESETS.map((group) => (
+                      <div key={group.label}>
+                        <h3 className="pl-6 text-sm font-light text-text-muted">
+                          {group.label}
+                        </h3>
+                        <ul className="mt-4 flex w-full flex-col gap-3 px-3">
+                          {group.presets.map((name) => (
+                            <li key={name} className="w-full">
+                              <button
+                                type="button"
+                                className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
+                                title={name}
+                              >
+                                {name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+        </>
       )}
 
       <AccountRow

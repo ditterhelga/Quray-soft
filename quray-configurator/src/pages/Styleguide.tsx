@@ -1,5 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowSquareOut, CaretDown, Plus, Star, X } from '@phosphor-icons/react'
+import {
+  ArrowSquareOut,
+  CaretDown,
+  CaretRight,
+  MusicNote,
+  Plus,
+  SquaresFour,
+  Star,
+  X,
+} from '@phosphor-icons/react'
 import LibraryIcon from '@/assets/icons/Library-icon.svg?react'
 import { AccountRow } from '@/components/layout/AccountRow'
 import { navLinkClass } from '@/components/layout/NavItem'
@@ -113,6 +122,7 @@ const TOC = [
       { id: 'set-picker', label: 'Set Picker' },
       { id: 'add-preset-picker', label: 'Add Preset Picker' },
       { id: 'nav-item', label: 'Nav Item' },
+      { id: 'preset-setup-row', label: 'Preset Setup Row' },
       { id: 'account-row', label: 'Account Row' },
     ],
   },
@@ -297,6 +307,36 @@ function ColorSwatch({ token, hex }: { token: string; hex: string }) {
       <div>
         <p className="font-mono text-xs text-text-primary">{token}</p>
         <p className="mt-1 text-xs text-text-muted">{hex}</p>
+      </div>
+    </div>
+  )
+}
+
+const PRESET_SETUP_ROW_CLASSNAME =
+  'flex items-center gap-3 h-14 px-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out'
+
+function StyleguidePresetSetupRowDemo({
+  state,
+  label,
+}: {
+  state: 'default' | 'hover'
+  label: string
+}) {
+  const className =
+    state === 'hover'
+      ? `${PRESET_SETUP_ROW_CLASSNAME} bg-bg-row-hover`
+      : PRESET_SETUP_ROW_CLASSNAME
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs text-text-muted">{label}</span>
+      <div className={className}>
+        <MusicNote size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+          <span className="block text-sm text-text-primary">Scale</span>
+          <span className="block text-xs text-text-muted">D Minor</span>
+        </div>
+        <CaretRight size={16} className="ml-auto shrink-0 text-text-muted" />
       </div>
     </div>
   )
@@ -1610,6 +1650,56 @@ export function Styleguide() {
             </div>
             <p className="mt-6 text-sm font-light text-text-muted">
               Sidebar navigation entry.
+            </p>
+          </Section>
+
+          <Section id="preset-setup-row" title="Preset Setup Row">
+            <div className="mx-auto w-[264px] space-y-6 rounded-lg border border-border-panel bg-bg-sidebar py-4">
+              <p className="shrink-0 pl-6 text-sm font-light uppercase tracking-wide text-text-muted">
+                Preset setup
+              </p>
+              <div className="flex flex-col gap-2 px-4">
+                <button type="button" className={`w-full ${PRESET_SETUP_ROW_CLASSNAME}`}>
+                  <span
+                    className="h-5 w-5 shrink-0 rounded-full"
+                    style={{
+                      background: 'linear-gradient(135deg, #A259F7, #F24E8A)',
+                    }}
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm text-text-primary">Color</span>
+                  </div>
+                  <CaretRight size={16} className="ml-auto shrink-0 text-text-muted" />
+                </button>
+                <button type="button" className={`w-full ${PRESET_SETUP_ROW_CLASSNAME}`}>
+                  <MusicNote size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm text-text-primary">Scale</span>
+                    <span className="block text-xs text-text-muted">D Minor</span>
+                  </div>
+                  <CaretRight size={16} className="ml-auto shrink-0 text-text-muted" />
+                </button>
+                <button type="button" className={`w-full ${PRESET_SETUP_ROW_CLASSNAME}`}>
+                  <SquaresFour size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm text-text-primary">Layout</span>
+                    <span className="block text-xs text-text-muted">6 × 6 grid</span>
+                  </div>
+                  <CaretRight size={16} className="ml-auto shrink-0 text-text-muted" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-6 px-4 pt-2">
+                <StyleguidePresetSetupRowDemo state="default" label="Default" />
+                <StyleguidePresetSetupRowDemo state="hover" label="Hover" />
+              </div>
+            </div>
+            <p className="mt-6 text-sm font-light text-text-muted">
+              Editor sidebar preset setup rows · matches NavItem active surface (
+              <code className="font-mono text-xs text-text-secondary">bg-bg-active</code>,{' '}
+              <code className="font-mono text-xs text-text-secondary">border-border-active</code>
+              ) · rows sit in a <code className="font-mono text-xs text-text-secondary">px-4</code>{' '}
+              wrapper · CaretRight uses <code className="font-mono text-xs text-text-secondary">ml-auto</code>.
             </p>
           </Section>
 
