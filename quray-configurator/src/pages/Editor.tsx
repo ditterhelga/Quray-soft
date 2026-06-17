@@ -269,6 +269,7 @@ export function Editor() {
   const [drawMode, setDrawMode] = useState(false)
 
   const zoneIdCounter = useId()
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
   const colorPoolRef = useRef<string[]>(shuffle([...ZONE_PALETTE]))
 
   function pickNextZoneColor(): string {
@@ -282,6 +283,16 @@ export function Editor() {
     setZones(MOCK_ZONES)
     setSelectedZoneId(null)
   }, [setZones, setSelectedZoneId])
+
+  useEffect(() => {
+    function handleMouseDown(e: MouseEvent) {
+      if (!drawMode) return
+      if (canvasContainerRef.current?.contains(e.target as Node)) return
+      setDrawMode(false)
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [drawMode])
 
   const handleZoneSelect = useCallback((id: string | null) => {
     setSelectedZoneId(id)
@@ -373,7 +384,7 @@ export function Editor() {
           </header>
 
           <div className="relative min-h-0 flex-1">
-            <div className="absolute inset-4 overflow-hidden rounded-2xl border border-border-panel bg-bg-base">
+            <div ref={canvasContainerRef} className="absolute inset-4 overflow-hidden rounded-2xl border border-border-panel bg-bg-base">
               <FanCanvas
                 zones={zones}
                 selectedZoneId={selectedZoneId}

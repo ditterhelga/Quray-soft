@@ -334,37 +334,73 @@ function drawZones(
     ctx.lineWidth = isSelected ? 2 : 1
     ctx.stroke()
 
-    // --- Zone label ---
+    // --- Zone label + icons (all baseline-aligned) ---
     const PX_OFFSET = 24
     const span = S.outerR - S.innerR
     const OFFSET_X = PX_OFFSET / (span * 2)
     const OFFSET_Y = PX_OFFSET / span
     const labelPos = logicalToCanvas(xMin + OFFSET_X, yMax - OFFSET_Y, S)
+
+    // Shared baseline for all icons
+    const BASE_Y = labelPos.y
+    const ICON_H = 10
+    const iconBaseY = BASE_Y
+
     ctx.save()
     ctx.font = 'normal 14px monospace'
     ctx.fillStyle = 'rgba(238, 239, 252, 0.90)'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    ctx.fillText(String(i + 1).padStart(2, '0'), labelPos.x, labelPos.y)
+    ctx.fillText(String(i + 1).padStart(2, '0'), labelPos.x, BASE_Y)
     ctx.restore()
 
-    // --- Lock icon (padlock, right of zone number) ---
-    if (zone.locked) {
-      const ICON_SIZE = 9
-      const iconX = labelPos.x + 24
-      const iconY = labelPos.y  // aligned with text top
+    let iconCursorX = labelPos.x + 26
 
+    // Lock icon
+    if (zone.locked) {
+      const ix = iconCursorX
+      const iy = iconBaseY
+      const W = 9
       ctx.save()
-      // body starts below shackle
       ctx.fillStyle = 'rgba(238, 239, 252, 0.7)'
-      ctx.beginPath()
-      ctx.roundRect(iconX, iconY + 3, ICON_SIZE, 7, 2)
-      ctx.fill()
-      // shackle arc (top half of circle, from iconY up)
       ctx.strokeStyle = 'rgba(238, 239, 252, 0.7)'
+      ctx.beginPath()
+      ctx.roundRect(ix, iy + 3, W, 7, 2)
+      ctx.fill()
       ctx.lineWidth = 1.5
       ctx.beginPath()
-      ctx.arc(iconX + ICON_SIZE / 2, iconY + 3, ICON_SIZE / 2 - 1, Math.PI, 0)
+      ctx.arc(ix + W / 2, iy + 3, W / 2 - 1, Math.PI, 0)
+      ctx.stroke()
+      ctx.restore()
+      iconCursorX += 14
+    }
+
+    // Mute icon
+    if (isInactive) {
+      const ix = iconCursorX
+      const iy = iconBaseY
+      const alpha = 'rgba(238, 239, 252, 0.6)'
+      ctx.save()
+      ctx.fillStyle = alpha
+      ctx.strokeStyle = alpha
+      ctx.lineCap = 'round'
+      // Speaker body
+      ctx.beginPath()
+      ctx.roundRect(ix, iy + 2, 5, 7, 1)
+      ctx.fill()
+      // Speaker cone
+      ctx.beginPath()
+      ctx.moveTo(ix + 5, iy + 1)
+      ctx.lineTo(ix + 10, iy)
+      ctx.lineTo(ix + 10, iy + 11)
+      ctx.lineTo(ix + 5, iy + 10)
+      ctx.closePath()
+      ctx.fill()
+      // Strike-through
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(ix, iy)
+      ctx.lineTo(ix + 11, iy + 11)
       ctx.stroke()
       ctx.restore()
     }

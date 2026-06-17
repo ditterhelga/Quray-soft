@@ -1,15 +1,16 @@
 import { CaretRight, Trash } from '@phosphor-icons/react'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MIDI_DEVICES, findMidiDevice, findMidiParameter } from '@/components/editor/midiDevices'
 import {
   createDefaultMapping,
   CV_MODE_OPTIONS,
   MAPPING_TYPE_OPTIONS,
   mappingSummary,
   ROOT_NOTES,
-  type ZoneAxis,
   type ZoneMapping,
   type ZoneMappingType,
 } from '@/components/editor/zoneMappings'
+import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { StepperInput } from '@/components/ui/StepperInput'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
@@ -25,6 +26,9 @@ export function zoneFieldCardClassName() {
 function zoneFieldLabelClassName() {
   return 'shrink-0 text-sm font-light text-text-muted'
 }
+
+const textNumericInputClassName =
+  'min-w-0 flex-1 bg-transparent text-right text-sm font-light text-text-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
 function ZoneFieldSelect({
   label,
@@ -61,12 +65,81 @@ function ZoneFieldSelect({
   )
 }
 
-function ZoneNumericField({
+function IntegerTextInput({
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  value: number
+  min: number
+  max: number
+  onChange: (value: number) => void
+}) {
+  const [draft, setDraft] = useState(String(value))
+
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  function commit(raw: string) {
+    const parsed = Number.parseInt(raw, 10)
+    if (Number.isNaN(parsed)) {
+      setDraft(String(value))
+      return
+    }
+    const clamped = Math.max(min, Math.min(max, parsed))
+    setDraft(String(clamped))
+    onChange(clamped)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+    if (!allowed.includes(event.key) && !/^\d$/.test(event.key)) {
+      event.preventDefault()
+    }
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => commit(draft)}
+      onKeyDown={handleKeyDown}
+      className={textNumericInputClassName}
+    />
+  )
+}
+
+function ZoneIntegerTextField({
   label,
   value,
   min,
   max,
-  step = 1,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className={zoneFieldCardClassName()}>
+      <span className={zoneFieldLabelClassName()}>{label}</span>
+      <IntegerTextInput value={value} min={min} max={max} onChange={onChange} />
+    </label>
+  )
+}
+
+function ZoneDecimalTextField({
+  label,
+  value,
+  min,
+  max,
   suffix,
   onChange,
 }: {
@@ -74,29 +147,40 @@ function ZoneNumericField({
   value: number
   min: number
   max: number
-  step?: number
   suffix?: string
   onChange: (value: number) => void
 }) {
+  const [draft, setDraft] = useState(String(value))
+
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  function commit(raw: string) {
+    const parsed = Number.parseFloat(raw)
+    if (Number.isNaN(parsed)) {
+      setDraft(String(value))
+      return
+    }
+    const clamped = Math.max(min, Math.min(max, parsed))
+    const rounded = Math.round(clamped * 10) / 10
+    setDraft(String(rounded))
+    onChange(rounded)
+  }
+
   return (
     <label className={zoneFieldCardClassName()}>
       <span className={zoneFieldLabelClassName()}>{label}</span>
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 flex-1 items-center gap-1">
         <input
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(event) => {
-            const next = Number(event.target.value)
-            if (!Number.isNaN(next)) {
-              onChange(Math.max(min, Math.min(max, next)))
-            }
-          }}
-          className="w-16 bg-transparent text-right text-sm font-light text-text-primary outline-none"
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => commit(draft)}
+          className={textNumericInputClassName}
         />
-        {suffix && <span className="text-sm font-light text-text-muted">{suffix}</span>}
+        {suffix && <span className="shrink-0 text-sm font-light text-text-muted">{suffix}</span>}
       </div>
     </label>
   )
@@ -210,7 +294,7 @@ export function ZoneMappingCard({
               </button>
             ))}
           </div>
-          {mapping.type !== 'Note' && (
+          {mapping.type !== 'Note' && mapping.type !== 'CC' && (
             <ZoneFieldSelect
               label="Channel"
               value={String(mapping.channel)}
@@ -328,47 +412,133 @@ export function ZoneMappingCard({
 
           {mapping.type === 'CC' && (
             <>
-              <ZoneNumericField
-                label="CC number"
-                value={mapping.cc ?? 0}
-                min={0}
-                max={127}
-                onChange={(cc) => onUpdate({ cc })}
+              <ZoneFieldSelect
+                label="Channel"
+                value={String(mapping.channel)}
+                options={CHANNEL_OPTIONS}
+                onChange={(channel) => onUpdate({ channel: Number(channel) })}
               />
-              <SegmentedControl
-                value={mapping.axis}
-                options={[
-                  { value: 'Y', label: 'Y' },
-                  { value: 'X', label: 'X' },
-                  { value: 'Entry', label: 'Entry' },
-                  { value: 'Exit', label: 'Exit' },
-                ]}
-                onChange={(axis) => onUpdate({ axis: axis as ZoneAxis })}
-                ariaLabel="CC axis"
-              />
-              <ToggleSwitch
-                label="Single value"
-                checked={mapping.singleValue ?? false}
-                onChange={(singleValue) => onUpdate({ singleValue })}
-              />
-              {mapping.singleValue ? (
-                <ZoneNumericField
-                  label="Value"
-                  value={mapping.bottom ?? 0}
-                  min={0}
-                  max={127}
-                  onChange={(bottom) => onUpdate({ bottom })}
+              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
+                <span className="shrink-0 text-sm font-light text-text-muted">Axis</span>
+                <div className="flex items-center gap-2">
+                  {(['Y', 'X'] as const).map((axis) => (
+                    <button
+                      key={axis}
+                      type="button"
+                      onClick={() => onUpdate({ axis })}
+                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
+                        mapping.axis === axis
+                          ? 'border-transparent bg-accent text-text-primary'
+                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
+                      }`}
+                    >
+                      {axis}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {(mapping.ccInputMode ?? 'device') === 'device' && (
+                <>
+                  <div className={zoneFieldCardClassName()}>
+                    <span className="shrink-0 text-sm font-light text-text-muted">Device</span>
+                    <select
+                      value={mapping.ccDeviceId ?? ''}
+                      onChange={(event) => {
+                        const deviceId = event.target.value
+                        if (deviceId === '__add__') return
+                        onUpdate({ ccDeviceId: deviceId || undefined, ccParamId: undefined, cc: undefined })
+                      }}
+                      className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                    >
+                      <option value="">Select device</option>
+                      {MIDI_DEVICES.map((device) => (
+                        <option key={device.id} value={device.id}>
+                          {device.name}
+                        </option>
+                      ))}
+                      <option disabled>──────────</option>
+                      <option value="__add__">Add device...</option>
+                    </select>
+                  </div>
+                  {mapping.ccDeviceId && (
+                    <div className={zoneFieldCardClassName()}>
+                      <span className="shrink-0 text-sm font-light text-text-muted">Parameter</span>
+                      <select
+                        value={mapping.ccParamId ?? ''}
+                        onChange={(event) => {
+                          const paramId = event.target.value || undefined
+                          const param = findMidiParameter(mapping.ccDeviceId, paramId)
+                          onUpdate({ ccParamId: paramId, cc: param?.cc })
+                        }}
+                        className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                      >
+                        <option value="">Select parameter</option>
+                        {findMidiDevice(mapping.ccDeviceId)?.parameters.map((param) => (
+                          <option key={param.id} value={param.id}>
+                            {param.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {mapping.ccParamId && (
+                    <div className={zoneFieldCardClassName()}>
+                      <span className="shrink-0 text-sm font-light text-text-muted">CC</span>
+                      <span className="text-sm font-light text-text-muted">
+                        {mapping.cc ?? '—'} · auto
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+              {(mapping.ccInputMode ?? 'device') === 'manual' && (
+                <div className={zoneFieldCardClassName()}>
+                  <span className="shrink-0 text-sm font-light text-text-muted">CC number</span>
+                  <IntegerTextInput
+                    value={mapping.cc ?? 0}
+                    min={0}
+                    max={127}
+                    onChange={(cc) => onUpdate({ cc })}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({
+                    ccInputMode: (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
+                    ccDeviceId: undefined,
+                    ccParamId: undefined,
+                    cc: undefined,
+                  })
+                }
+                className="mb-2 ml-1 flex w-full cursor-pointer items-center gap-2"
+              >
+                <SelectionCheckbox
+                  checked={(mapping.ccInputMode ?? 'device') === 'manual'}
+                  compact
+                  ariaLabel="Manual input"
+                  onToggle={() =>
+                    onUpdate({
+                      ccInputMode: (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
+                      ccDeviceId: undefined,
+                      ccParamId: undefined,
+                      cc: undefined,
+                    })
+                  }
                 />
-              ) : (
+                <span className="text-sm font-light text-text-muted">Manual input</span>
+              </button>
+              {!mapping.singleValue ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <ZoneNumericField
+                  <ZoneIntegerTextField
                     label="Bottom"
                     value={mapping.bottom ?? 0}
                     min={0}
                     max={127}
                     onChange={(bottom) => onUpdate({ bottom })}
                   />
-                  <ZoneNumericField
+                  <ZoneIntegerTextField
                     label="Top"
                     value={mapping.top ?? 127}
                     min={0}
@@ -376,23 +546,62 @@ export function ZoneMappingCard({
                     onChange={(top) => onUpdate({ top })}
                   />
                 </div>
+              ) : (
+                <ZoneIntegerTextField
+                  label="Value"
+                  value={mapping.bottom ?? 0}
+                  min={0}
+                  max={127}
+                  onChange={(bottom) => onUpdate({ bottom, top: bottom })}
+                />
               )}
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({
+                    singleValue: !mapping.singleValue,
+                    ...(!mapping.singleValue ? { top: mapping.bottom ?? 0 } : {}),
+                  })
+                }
+                className="ml-1 flex w-full cursor-pointer items-center gap-2"
+              >
+                <SelectionCheckbox
+                  checked={mapping.singleValue ?? false}
+                  compact
+                  ariaLabel="Single value"
+                  onToggle={() =>
+                    onUpdate({
+                      singleValue: !mapping.singleValue,
+                      ...(!mapping.singleValue ? { top: mapping.bottom ?? 0 } : {}),
+                    })
+                  }
+                />
+                <span className="text-sm font-light text-text-muted">Single value</span>
+              </button>
             </>
           )}
 
           {mapping.type === 'CV' && (
             <>
-              <SegmentedControl
-                value={String(mapping.port ?? 1)}
-                options={[
-                  { value: '1', label: 'CV1' },
-                  { value: '2', label: 'CV2' },
-                  { value: '3', label: 'CV3' },
-                  { value: '4', label: 'CV4' },
-                ]}
-                onChange={(port) => onUpdate({ port: Number(port) })}
-                ariaLabel="CV port"
-              />
+              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
+                <span className="shrink-0 text-sm font-light text-text-muted">Port</span>
+                <div className="flex items-center gap-2">
+                  {([1, 2, 3, 4] as const).map((port) => (
+                    <button
+                      key={port}
+                      type="button"
+                      onClick={() => onUpdate({ port })}
+                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
+                        (mapping.port ?? 1) === port
+                          ? 'border-transparent bg-accent text-text-primary'
+                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
+                      }`}
+                    >
+                      CV{port}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ZoneFieldSelect
                 label="Mode"
                 value={mapping.cvMode ?? 'Pitch'}
@@ -404,54 +613,92 @@ export function ZoneMappingCard({
                   }
                 }}
               />
-              <SegmentedControl
-                value={mapping.axis}
-                options={[
-                  { value: 'Y', label: 'Y' },
-                  { value: 'X', label: 'X' },
-                  { value: 'Entry', label: 'Entry' },
-                  { value: 'Exit', label: 'Exit' },
-                ]}
-                onChange={(axis) => onUpdate({ axis: axis as ZoneAxis })}
-                ariaLabel="CV axis"
-              />
-              <ToggleSwitch
-                label="Single value"
-                checked={mapping.singleValue ?? false}
-                onChange={(singleValue) => onUpdate({ singleValue })}
-              />
-              {mapping.singleValue ? (
-                <ZoneNumericField
-                  label="Value"
-                  value={mapping.bottom ?? 0}
-                  min={-5}
-                  max={5}
-                  step={0.1}
-                  suffix="V"
-                  onChange={(bottom) => onUpdate({ bottom })}
-                />
-              ) : (
+              {mapping.cvMode === 'Pitch' && (
+                <div className={zoneFieldCardClassName()}>
+                  <span className="shrink-0 text-sm font-light text-text-muted">V/oct</span>
+                  <select
+                    value={mapping.vOct ?? 'eurorack'}
+                    onChange={(event) =>
+                      onUpdate({ vOct: event.target.value as 'eurorack' | 'buchla' })
+                    }
+                    className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                  >
+                    <option value="eurorack">Eurorack (1V/oct)</option>
+                    <option value="buchla">Buchla (1.2V/oct)</option>
+                  </select>
+                </div>
+              )}
+              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
+                <span className="shrink-0 text-sm font-light text-text-muted">Axis</span>
+                <div className="flex items-center gap-2">
+                  {(['Y', 'X'] as const).map((axis) => (
+                    <button
+                      key={axis}
+                      type="button"
+                      onClick={() => onUpdate({ axis })}
+                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
+                        mapping.axis === axis
+                          ? 'border-transparent bg-accent text-text-primary'
+                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
+                      }`}
+                    >
+                      {axis}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {!mapping.singleValue ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <ZoneNumericField
+                  <ZoneDecimalTextField
                     label="Bottom"
                     value={mapping.bottom ?? -5}
                     min={-5}
                     max={5}
-                    step={0.1}
                     suffix="V"
                     onChange={(bottom) => onUpdate({ bottom })}
                   />
-                  <ZoneNumericField
+                  <ZoneDecimalTextField
                     label="Top"
                     value={mapping.top ?? 5}
                     min={-5}
                     max={5}
-                    step={0.1}
                     suffix="V"
                     onChange={(top) => onUpdate({ top })}
                   />
                 </div>
+              ) : (
+                <ZoneDecimalTextField
+                  label="Value"
+                  value={mapping.bottom ?? -5}
+                  min={-5}
+                  max={5}
+                  suffix="V"
+                  onChange={(bottom) => onUpdate({ bottom })}
+                />
               )}
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({
+                    singleValue: !mapping.singleValue,
+                    ...(!mapping.singleValue ? { top: mapping.bottom ?? -5 } : {}),
+                  })
+                }
+                className="flex w-full cursor-pointer items-center justify-end gap-2"
+              >
+                <span className="text-sm font-light text-text-muted">Single value</span>
+                <SelectionCheckbox
+                  checked={mapping.singleValue ?? false}
+                  compact
+                  ariaLabel="Single value"
+                  onToggle={() =>
+                    onUpdate({
+                      singleValue: !mapping.singleValue,
+                      ...(!mapping.singleValue ? { top: mapping.bottom ?? -5 } : {}),
+                    })
+                  }
+                />
+              </button>
             </>
           )}
 

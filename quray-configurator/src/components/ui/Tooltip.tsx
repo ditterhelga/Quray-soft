@@ -12,7 +12,7 @@ export function tooltipWrapperClassName() {
 }
 
 export function tooltipBubbleClassName() {
-  return 'rounded-lg bg-bg-active px-3 py-1.5 text-sm font-light font-[300] text-text-muted shadow-lg whitespace-nowrap [font-weight:300]'
+  return 'rounded-lg bg-bg-hover px-3 py-1.5 text-sm font-light font-[300] text-text-muted shadow-lg max-w-[160px] text-center [font-weight:300]'
 }
 
 export function tooltipPlacementClassName() {

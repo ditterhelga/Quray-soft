@@ -10,6 +10,7 @@ import {
   CaretRight,
   Check,
   MusicNote,
+  Plus,
   SquaresFour,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -20,6 +21,7 @@ import { useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Divider } from '@/components/ui/Divider'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 function editorZoneStatusSubLabel(zone: EditorZone): string | null {
   const parts: string[] = []
@@ -77,6 +79,51 @@ const SCALES_LIST = [
 ] as const
 
 const ROOT_NOTE_OPTIONS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
+const LAYOUTS = [
+  { id: 'freehand', name: 'Freehand', zones: [] },
+  {
+    id: 'full',
+    name: 'Full',
+    zones: [
+      { xMin: 0, xMax: 1, yMin: 0, yMax: 1, color: '#6C5BD9' },
+    ],
+  },
+  {
+    id: 'split2',
+    name: 'Split 2',
+    zones: [
+      { xMin: 0, xMax: 0.5, yMin: 0, yMax: 1, color: '#6C5BD9' },
+      { xMin: 0.5, xMax: 1, yMin: 0, yMax: 1, color: '#913F7E' },
+    ],
+  },
+  {
+    id: 'split3',
+    name: 'Split 3',
+    zones: [
+      { xMin: 0, xMax: 0.33, yMin: 0, yMax: 1, color: '#6C5BD9' },
+      { xMin: 0.33, xMax: 0.66, yMin: 0, yMax: 1, color: '#913F7E' },
+      { xMin: 0.66, xMax: 1, yMin: 0, yMax: 1, color: '#B45846' },
+    ],
+  },
+  {
+    id: 'nearfar',
+    name: 'Near / Far',
+    zones: [
+      { xMin: 0, xMax: 1, yMin: 0, yMax: 0.5, color: '#6C5BD9' },
+      { xMin: 0, xMax: 1, yMin: 0.5, yMax: 1, color: '#3E8577' },
+    ],
+  },
+  {
+    id: 'wide2',
+    name: 'Wide + 2',
+    zones: [
+      { xMin: 0, xMax: 0.5, yMin: 0, yMax: 1, color: '#6C5BD9' },
+      { xMin: 0.5, xMax: 1, yMin: 0, yMax: 0.5, color: '#913F7E' },
+      { xMin: 0.5, xMax: 1, yMin: 0.5, yMax: 1, color: '#B45846' },
+    ],
+  },
+] as const
 
 type SidebarProps = {
   isCollapsed: boolean
@@ -358,6 +405,201 @@ function PresetScalePopover({
   )
 }
 
+function FanPreview({ zones }: { zones: readonly { xMin: number; xMax: number; yMin: number; yMax: number; color: string }[] }) {
+  const W = 80
+  const H = 60
+  const cx = W / 2
+  const cy = H * 1.15
+  const outerR = 56
+  const innerR = 16
+  const totalAngle = 96
+  const startAngle = -90 - totalAngle / 2
+
+  function sectorPath(xMin: number, xMax: number, yMin: number, yMax: number) {
+    const a1 = (startAngle + xMin * totalAngle) * Math.PI / 180
+    const a2 = (startAngle + xMax * totalAngle) * Math.PI / 180
+    const r1 = innerR + yMin * (outerR - innerR)
+    const r2 = innerR + yMax * (outerR - innerR)
+    const x1 = cx + Math.cos(a1) * r2
+    const y1 = cy + Math.sin(a1) * r2
+    const x2 = cx + Math.cos(a2) * r2
+    const y2 = cy + Math.sin(a2) * r2
+    const x3 = cx + Math.cos(a2) * r1
+    const y3 = cy + Math.sin(a2) * r1
+    const x4 = cx + Math.cos(a1) * r1
+    const y4 = cy + Math.sin(a1) * r1
+    return `M ${x1} ${y1} A ${r2} ${r2} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${r1} ${r1} 0 0 0 ${x4} ${y4} Z`
+  }
+
+  const fullPath = sectorPath(0, 1, 0, 1)
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-hidden rounded-md">
+      <defs>
+        <clipPath id="fan-clip">
+          <rect width={W} height={H} />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#fan-clip)">
+        {zones.length === 0 ? (
+          <>
+            <path d={fullPath} fill="none" stroke="var(--color-border-subtle)" strokeWidth={1} strokeDasharray="3 2" />
+            <text x={W / 2} y={H / 2 + 4} textAnchor="middle" fontSize="16" fill="var(--color-text-muted)">+</text>
+          </>
+        ) : (
+          <>
+            <path d={fullPath} fill="var(--color-bg-base)" />
+            {zones.map((z, i) => (
+              <path key={i} d={sectorPath(z.xMin, z.xMax, z.yMin, z.yMax)} fill={z.color} opacity={0.85} />
+            ))}
+            <path d={fullPath} fill="none" stroke="var(--color-border-subtle)" strokeWidth={0.5} />
+          </>
+        )}
+      </g>
+    </svg>
+  )
+}
+
+function PresetLayoutPopover({
+  currentLayoutId,
+  anchorRef,
+  onClose,
+  onApply,
+  hasZones,
+}: {
+  currentLayoutId: string
+  anchorRef: React.RefObject<HTMLButtonElement>
+  onClose: () => void
+  onApply: (layoutId: string) => void
+  hasZones: boolean
+}) {
+  const [pendingLayoutId, setPendingLayoutId] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [style, setStyle] = useState<React.CSSProperties>({})
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+    const rect = anchor.getBoundingClientRect()
+    const POPOVER_HEIGHT = 420
+    setStyle({
+      position: 'fixed',
+      top: Math.min(rect.top, window.innerHeight - POPOVER_HEIGHT - 16),
+      left: rect.right + 8,
+      zIndex: 50,
+      width: 280,
+    })
+  }, [])
+
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent) {
+      if (containerRef.current?.contains(e.target as Node)) return
+      if (anchorRef.current?.contains(e.target as Node)) return
+      onClose()
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
+  function handleSelect(layoutId: string) {
+    if (layoutId === currentLayoutId) { onClose(); return }
+    if (hasZones && layoutId !== 'freehand') {
+      setPendingLayoutId(layoutId)
+    } else {
+      onApply(layoutId)
+      onClose()
+    }
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      style={style}
+      className="rounded-xl border border-border-subtle bg-bg-elevated p-4 shadow-lg animate-[dropdown-enter_150ms_ease-out_both]"
+    >
+      {pendingLayoutId ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-light text-text-primary">Replace current zones?</p>
+          <p className="text-xs font-light text-text-muted">This will remove all existing zones and cannot be undone.</p>
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => { onApply(pendingLayoutId); onClose() }}
+              className="flex h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-accent text-sm font-light text-text-primary transition-colors duration-[120ms] hover:opacity-90"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingLayoutId(null)}
+              className="flex h-9 flex-1 cursor-pointer items-center justify-center rounded-lg border border-border-subtle bg-transparent text-sm font-light text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {LAYOUTS.map((layout) => {
+            const isSelected = layout.id === currentLayoutId
+            const buttonClassName = `flex flex-col items-center gap-2 rounded-xl border p-3 cursor-pointer transition-colors duration-[120ms] ${
+              isSelected
+                ? 'border-accent bg-bg-active'
+                : 'border-border-subtle bg-bg-active hover:border-accent/50 hover:bg-bg-row-hover'
+            }`
+            const buttonContent = (
+              <>
+                {layout.id === 'freehand' ? (
+                  <div className="flex h-[60px] w-[80px] items-center justify-center rounded-md border border-dashed border-border-subtle">
+                    <Plus size={20} weight="light" className="text-text-muted" aria-hidden="true" />
+                  </div>
+                ) : (
+                  <FanPreview zones={layout.zones} />
+                )}
+                <span className={`text-xs font-light ${isSelected ? 'text-text-primary' : 'text-text-muted'}`}>
+                  {layout.name}
+                </span>
+              </>
+            )
+
+            if (layout.id === 'freehand') {
+              return (
+                <Tooltip key={layout.id} content="Draw zones freely on the canvas">
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(layout.id)}
+                    className={buttonClassName}
+                  >
+                    {buttonContent}
+                  </button>
+                </Tooltip>
+              )
+            }
+
+            return (
+              <button
+                key={layout.id}
+                type="button"
+                onClick={() => handleSelect(layout.id)}
+                className={buttonClassName}
+              >
+                {buttonContent}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Sidebar({
   isCollapsed,
   onCollapsedChange,
@@ -366,16 +608,38 @@ export function Sidebar({
   const location = useLocation()
   const isEditor = location.pathname === '/editor'
   const navigate = useNavigate()
-  const { zones, selectedZoneId, setSelectedZoneId, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot } = useEditorZones()
+  const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot } = useEditorZones()
   const [presetName, setPresetName] = useState(MOCK_PRESET.name)
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
+  const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false)
+  const [currentLayoutId, setCurrentLayoutId] = useState('freehand')
   const [presetOctave, setPresetOctave] = useState(4)
   const [colorA, setColorA] = useState(MOCK_PRESET.colorA)
   const [colorB, setColorB] = useState(MOCK_PRESET.colorB)
   const colorButtonRef = useRef<HTMLButtonElement>(null)
   const scaleButtonRef = useRef<HTMLButtonElement>(null)
+  const layoutButtonRef = useRef<HTMLButtonElement>(null)
+
+  function handleApplyLayout(layoutId: string) {
+    const layout = LAYOUTS.find(l => l.id === layoutId)
+    if (!layout) return
+    setCurrentLayoutId(layoutId)
+    const PALETTE = ['#6C5BD9','#5E3B93','#913F7E','#A75465','#B45846','#B76D3A','#AC7F39','#647D46']
+    const newZones: EditorZone[] = layout.zones.map((z, i) => ({
+      id: `layout-${layoutId}-${i}-${Date.now()}`,
+      name: `Zone ${i + 1}`,
+      color: PALETTE[i % PALETTE.length],
+      type: null,
+      active: true,
+      locked: false,
+      position: [true, z.xMin, z.yMin, z.xMax, z.yMax] as [boolean, number, number, number, number],
+      mappings: [],
+    }))
+    setZones(newZones)
+    setSelectedZoneId(null)
+  }
 
   return (
     <aside
@@ -541,13 +805,17 @@ export function Sidebar({
                 </button>
 
                 <button
+                  ref={layoutButtonRef}
                   type="button"
+                  onClick={() => setLayoutPopoverOpen(v => !v)}
                   className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
                 >
                   <SquaresFour size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
                   <div className="flex-1 min-w-0 text-left">
                     <span className="block text-left text-sm text-text-primary">Layout</span>
-                    <span className="block text-left text-xs font-light text-text-muted">Freehand</span>
+                    <span className="block text-left text-xs font-light text-text-muted">
+                      {LAYOUTS.find(l => l.id === currentLayoutId)?.name ?? 'Freehand'}
+                    </span>
                   </div>
                   <CaretRight size={16} className="shrink-0 text-text-muted ml-auto" />
                 </button>
@@ -636,6 +904,16 @@ export function Sidebar({
                 onOctaveChange={setPresetOctave}
                 anchorRef={scaleButtonRef}
                 onClose={() => setScalePopoverOpen(false)}
+              />
+            )}
+
+            {layoutPopoverOpen && (
+              <PresetLayoutPopover
+                currentLayoutId={currentLayoutId}
+                anchorRef={layoutButtonRef}
+                onClose={() => setLayoutPopoverOpen(false)}
+                onApply={handleApplyLayout}
+                hasZones={zones.length > 0}
               />
             )}
           </div>

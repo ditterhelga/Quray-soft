@@ -1,3 +1,5 @@
+import { findMidiParameter } from '@/components/editor/midiDevices'
+
 export const ROOT_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
 
 export type ZoneMappingType = 'Note' | 'CC' | 'CV' | 'CV note'
@@ -19,8 +21,12 @@ export type ZoneMapping = {
     yDivisions: number
   }
   cc?: number
+  ccInputMode?: 'device' | 'manual'
+  ccDeviceId?: string
+  ccParamId?: string
   port?: number
   cvMode?: CvMode
+  vOct?: 'eurorack' | 'buchla'
   gateChannel?: number
   singleValue?: boolean
   bottom?: number
@@ -60,6 +66,7 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
       return {
         ...base,
         cc: 74,
+        ccInputMode: 'device',
         singleValue: false,
         bottom: 0,
         top: 127,
@@ -69,6 +76,7 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
         ...base,
         port: 1,
         cvMode: 'Pitch',
+        vOct: 'eurorack',
         singleValue: false,
         bottom: -5,
         top: 5,
@@ -126,8 +134,13 @@ export function mappingSummary(mapping: ZoneMapping): string {
   switch (mapping.type) {
     case 'Note':
       return `Note · ${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
-    case 'CC':
+    case 'CC': {
+      if (mapping.ccInputMode === 'device') {
+        const param = findMidiParameter(mapping.ccDeviceId, mapping.ccParamId)
+        if (param) return `${param.name} · ${axisSummaryLabel(mapping.axis)}`
+      }
       return `CC ${mapping.cc ?? 0} · ${axisSummaryLabel(mapping.axis)}`
+    }
     case 'CV':
       return `CV${mapping.port ?? 1} · ${mapping.cvMode ?? 'Pitch'} · ${axisSummaryLabel(mapping.axis)}`
     case 'CV note':
