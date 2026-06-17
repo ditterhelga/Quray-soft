@@ -248,7 +248,7 @@ export function DeviceSlotKebabMenu({
               {items.map((item) => (
                 <div key={item.id}>
                   {item.dividerBefore && (
-                    <div className="my-1 border-t border-border" role="separator" />
+                    <div className="my-1 border-t border-border-subtle" role="separator" />
                   )}
                   <DeviceSlotKebabMenuItemButton item={item} onSelect={handleSelect} />
                 </div>

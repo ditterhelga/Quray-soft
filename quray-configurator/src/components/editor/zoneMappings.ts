@@ -54,7 +54,7 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
         ...base,
         rootNote: 'C',
         octave: 4,
-        split: { enabled: false, mode: 'Linear', xDivisions: 4, yDivisions: 1 },
+        split: { enabled: false, mode: 'Linear', steps: 6, xDivisions: 2, yDivisions: 2 },
       }
     case 'CC':
       return {

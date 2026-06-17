@@ -8,12 +8,16 @@ import StatusNoneIcon from '@/assets/icons/status-none.svg?react'
 import {
   ArrowLeft,
   CaretRight,
+  Check,
   MusicNote,
   SquaresFour,
   WarningCircle,
 } from '@phosphor-icons/react'
+import { zoneFieldCardClassName } from '@/components/editor/ZoneMappingCard'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import type { EditorZone } from '@/types'
+import { useEffect, useRef, useState } from 'react'
+import { HexColorPicker } from 'react-colorful'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Divider } from '@/components/ui/Divider'
 
@@ -29,8 +33,8 @@ import { NavItem } from '@/components/layout/NavItem'
 const MOCK_PRESET = {
   id: 'preset-1',
   name: 'Bassline Filter Sweep',
-  colorA: '#A259F7',
-  colorB: '#F24E8A',
+  colorA: '#1200e3',
+  colorB: '#cd00ff',
 }
 
 const mockSyncStatus = 'not-synced' as 'synced' | 'not-synced'
@@ -59,10 +63,299 @@ const RECENT_PRESETS = [
   },
 ] as const
 
+const SCALES_LIST = [
+  'Chromatic',
+  'Major (Ionian)',
+  'Natural Minor (Aeolian)',
+  'Dorian',
+  'Phrygian',
+  'Lydian',
+  'Mixolydian',
+  'Locrian',
+  'Major Pentatonic',
+  'Minor Pentatonic',
+] as const
+
+const ROOT_NOTE_OPTIONS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+
 type SidebarProps = {
   isCollapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
   onOpenDeviceSettings: () => void
+}
+
+type PresetColorPopoverProps = {
+  colorA: string
+  colorB: string
+  onChange: (colorA: string, colorB: string) => void
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  onClose: () => void
+}
+
+function PresetColorPopover({
+  colorA,
+  colorB,
+  onChange,
+  anchorRef,
+  onClose,
+}: PresetColorPopoverProps) {
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<'A' | 'B'>('A')
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  const activeColor = activeTab === 'A' ? colorA : colorB
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+
+    const rect = anchor.getBoundingClientRect()
+    setPosition({ top: rect.top, left: rect.right + 8 })
+  }, [anchorRef])
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node
+
+      if (anchorRef.current?.contains(target)) {
+        return
+      }
+
+      if (popoverRef.current?.contains(target)) {
+        return
+      }
+
+      onClose()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [anchorRef, onClose])
+
+  function handleColorChange(nextColor: string) {
+    if (activeTab === 'A') {
+      onChange(nextColor, colorB)
+    } else {
+      onChange(colorA, nextColor)
+    }
+  }
+
+  return (
+    <div
+      ref={popoverRef}
+      className="w-[240px] animate-[dropdown-enter_150ms_ease-out_both] rounded-xl border border-border-subtle bg-bg-elevated p-4 shadow-lg"
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 50,
+      }}
+    >
+      <div
+        className="relative h-8 w-full rounded-lg mb-4 overflow-hidden cursor-pointer flex"
+        style={{
+          background: `linear-gradient(135deg, ${colorA}, ${colorB})`,
+        }}
+      >
+        <div
+          className="flex-1 flex items-center justify-start pl-4"
+          onClick={() => setActiveTab('A')}
+        >
+          <span className="pointer-events-none text-xs font-medium text-text-primary">A</span>
+        </div>
+        <div
+          className="flex-1 flex items-center justify-end pr-4"
+          onClick={() => setActiveTab('B')}
+        >
+          <span className="pointer-events-none text-xs font-medium text-text-primary">B</span>
+        </div>
+      </div>
+
+      <div
+        className="flex h-11 items-center gap-1 rounded-lg border border-border-subtle bg-bg-active p-1"
+        role="tablist"
+        aria-label="Color stop"
+      >
+        {(['A', 'B'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex h-8 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
+              activeTab === tab
+                ? 'bg-accent text-text-primary'
+                : 'bg-transparent text-text-muted hover:bg-bg-hover'
+            }`}
+          >
+            Color {tab}
+          </button>
+        ))}
+      </div>
+
+      <HexColorPicker
+        color={activeColor}
+        onChange={handleColorChange}
+        style={{ width: '100%' }}
+        className="mt-3"
+      />
+
+      <label className={`${zoneFieldCardClassName()} mt-3`}>
+        <span className="shrink-0 text-sm font-light text-text-muted">Hex</span>
+        <input
+          type="text"
+          value={activeColor}
+          onChange={(event) => handleColorChange(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-light text-text-primary outline-none uppercase"
+        />
+      </label>
+
+      <span className="mt-3 block text-center text-xs font-light text-text-muted">
+        Sets the LED color on the device
+      </span>
+    </div>
+  )
+}
+
+type PresetScalePopoverProps = {
+  scale: string
+  root: string
+  octave: number
+  onScaleChange: (scale: string) => void
+  onRootChange: (root: string) => void
+  onOctaveChange: (octave: number) => void
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  onClose: () => void
+}
+
+const POPOVER_HEIGHT = 480
+
+function PresetScalePopover({
+  scale,
+  root,
+  octave,
+  onScaleChange,
+  onRootChange,
+  onOctaveChange,
+  anchorRef,
+  onClose,
+}: PresetScalePopoverProps) {
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const rootSelectRef = useRef<HTMLSelectElement>(null)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+
+    const rect = anchor.getBoundingClientRect()
+    setPosition({
+      top: Math.min(rect.top, window.innerHeight - POPOVER_HEIGHT - 16),
+      left: rect.right + 8,
+    })
+  }, [anchorRef])
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node
+
+      if (anchorRef.current?.contains(target)) {
+        return
+      }
+
+      if (popoverRef.current?.contains(target)) {
+        return
+      }
+
+      onClose()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [anchorRef, onClose])
+
+  return (
+    <div
+      ref={popoverRef}
+      className="w-[240px] animate-[dropdown-enter_150ms_ease-out_both] rounded-xl border border-border-subtle bg-bg-elevated p-4 shadow-lg"
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 50,
+      }}
+    >
+      <ul className="flex flex-col gap-1">
+        {SCALES_LIST.map((scaleName) => {
+          const isSelected = scale === scaleName
+
+          return (
+            <li key={scaleName}>
+              <button
+                type="button"
+                onClick={() => onScaleChange(scaleName)}
+                className={
+                  isSelected
+                    ? 'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-sm font-light text-text-primary bg-bg-active'
+                    : 'flex w-full items-center rounded-lg px-3 py-1.5 text-sm font-light text-text-muted hover:bg-bg-active hover:text-text-primary transition-colors duration-[120ms]'
+                }
+              >
+                <span className="-ml-2">{scaleName}</span>
+                {isSelected && (
+                  <Check size={14} weight="bold" className="ml-auto -mr-2 shrink-0 text-text-primary" />
+                )}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="my-3 border-t border-border-subtle" />
+
+      <div className="flex flex-col gap-3">
+        <label
+          className={zoneFieldCardClassName()}
+          onClick={() => rootSelectRef.current?.click()}
+        >
+          <span className="shrink-0 text-sm font-light text-text-muted">Root note</span>
+          <select
+            ref={rootSelectRef}
+            value={root}
+            onChange={(event) => onRootChange(event.target.value)}
+            className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+          >
+            {ROOT_NOTE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className={zoneFieldCardClassName()}>
+          <span className="shrink-0 text-sm font-light text-text-muted">Octave</span>
+          <select
+            value={String(octave)}
+            onChange={(event) => onOctaveChange(Number(event.target.value))}
+            className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+          >
+            {['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function Sidebar({
@@ -73,7 +366,16 @@ export function Sidebar({
   const location = useLocation()
   const isEditor = location.pathname === '/editor'
   const navigate = useNavigate()
-  const { zones, selectedZoneId, setSelectedZoneId, openZoneContextMenu } = useEditorZones()
+  const { zones, selectedZoneId, setSelectedZoneId, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot } = useEditorZones()
+  const [presetName, setPresetName] = useState(MOCK_PRESET.name)
+  const [editingName, setEditingName] = useState(false)
+  const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
+  const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
+  const [presetOctave, setPresetOctave] = useState(4)
+  const [colorA, setColorA] = useState(MOCK_PRESET.colorA)
+  const [colorB, setColorB] = useState(MOCK_PRESET.colorB)
+  const colorButtonRef = useRef<HTMLButtonElement>(null)
+  const scaleButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
     <aside
@@ -148,7 +450,27 @@ export function Sidebar({
             </div>
 
             <div className="px-6 pb-5 pt-4">
-              <p className="text-lg font-light text-text-primary">{MOCK_PRESET.name}</p>
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onBlur={() => setEditingName(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') setEditingName(false)
+                    if (e.key === 'Escape') setEditingName(false)
+                  }}
+                  className="min-w-0 flex-1 bg-transparent text-lg font-light text-text-primary outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditingName(true)}
+                  className="min-w-0 flex-1 cursor-text truncate text-left text-lg font-light text-text-primary transition-opacity hover:opacity-80"
+                >
+                  {presetName}
+                </button>
+              )}
 
               <div className="mt-3 flex items-center gap-1.5 text-xs text-text-muted">
                 {mockSyncStatus === 'synced' ? (
@@ -183,13 +505,15 @@ export function Sidebar({
 
               <div className="flex flex-col gap-3 px-4 pb-5">
                 <button
+                  ref={colorButtonRef}
                   type="button"
+                  onClick={() => setColorPopoverOpen((value) => !value)}
                   className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
                 >
                   <span
                     className="h-5 w-5 shrink-0 rounded-full"
                     style={{
-                      background: `linear-gradient(135deg, ${MOCK_PRESET.colorA}, ${MOCK_PRESET.colorB})`,
+                      background: `linear-gradient(135deg, ${colorA}, ${colorB})`,
                     }}
                     aria-hidden="true"
                   />
@@ -201,13 +525,17 @@ export function Sidebar({
                 </button>
 
                 <button
+                  ref={scaleButtonRef}
                   type="button"
+                  onClick={() => setScalePopoverOpen((value) => !value)}
                   className="flex h-12 w-full items-center gap-5 rounded-xl border border-border-active bg-bg-active pl-5 pr-4 cursor-pointer transition-colors duration-[120ms] ease-in-out hover:bg-bg-row-hover"
                 >
                   <MusicNote size={20} className="shrink-0 text-text-muted" aria-hidden="true" />
                   <div className="flex-1 min-w-0 text-left">
                     <span className="block text-left text-sm text-text-primary">Scale</span>
-                    <span className="block text-left text-xs font-light text-text-muted">Chromatic</span>
+                    <span className="block truncate text-left text-xs font-light text-text-muted">
+                      {presetScale}
+                    </span>
                   </div>
                   <CaretRight size={16} className="shrink-0 text-text-muted ml-auto" />
                 </button>
@@ -284,6 +612,32 @@ export function Sidebar({
                 })}
               </ul>
             </section>
+
+            {colorPopoverOpen && (
+              <PresetColorPopover
+                colorA={colorA}
+                colorB={colorB}
+                onChange={(nextColorA, nextColorB) => {
+                  setColorA(nextColorA)
+                  setColorB(nextColorB)
+                }}
+                anchorRef={colorButtonRef}
+                onClose={() => setColorPopoverOpen(false)}
+              />
+            )}
+
+            {scalePopoverOpen && (
+              <PresetScalePopover
+                scale={presetScale}
+                root={presetRoot}
+                octave={presetOctave}
+                onScaleChange={setPresetScale}
+                onRootChange={setPresetRoot}
+                onOctaveChange={setPresetOctave}
+                anchorRef={scaleButtonRef}
+                onClose={() => setScalePopoverOpen(false)}
+              />
+            )}
           </div>
         )
       ) : (

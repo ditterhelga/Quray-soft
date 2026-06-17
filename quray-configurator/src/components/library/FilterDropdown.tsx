@@ -116,7 +116,7 @@ export function FilterDropdownPanel({
     <div
       id={menuId}
       role="menu"
-      className={`min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg ${className}`.trim()}
+      className={`min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg ${className}`.trim()}
     >
       {options.map((option) => (
         <FilterOptionRow

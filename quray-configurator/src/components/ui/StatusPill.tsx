@@ -22,7 +22,7 @@ const MENU_ROW_HOVER =
   'cursor-pointer transition-colors duration-[120ms] hover:bg-bg-hover'
 
 function MenuDivider() {
-  return <div className="my-1 border-t border-border" role="separator" />
+  return <div className="my-1 border-t border-border-subtle" role="separator" />
 }
 
 function ConnectedMenu() {
@@ -134,7 +134,7 @@ export function StatusPill({ label, status, menu }: StatusPillProps) {
           <div
             id={menuId}
             role="menu"
-            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg"
+            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
           >
             {menu === 'connected' ? <ConnectedMenu /> : <CalibratedMenu />}
           </div>

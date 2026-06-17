@@ -1,9 +1,19 @@
 import { CaretDown, Plus } from '@phosphor-icons/react'
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import KebabIcon from '@/assets/icons/kebab-icon.svg?react'
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { ZoneMappingCard } from '@/components/editor/ZoneMappingCard'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
+import { createMappingId } from '@/components/editor/zoneMappings'
 import type { EditorZone } from '@/types'
 
 const ZONE_PALETTE = [
@@ -49,15 +59,23 @@ function ZonePanelSection({
   return <section className={className}>{children}</section>
 }
 
-function EditableZoneName({
-  name,
-  onSave,
-}: {
+interface EditableZoneNameHandle {
+  startEditing: () => void
+}
+
+const EditableZoneName = forwardRef<EditableZoneNameHandle, {
   name: string
   onSave: (name: string) => void
-}) {
+}>(function EditableZoneName({ name, onSave }, ref) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(name)
+
+  useImperativeHandle(ref, () => ({
+    startEditing() {
+      setDraft(name)
+      setEditing(true)
+    },
+  }))
 
   useEffect(() => {
     setDraft(name)
@@ -101,7 +119,7 @@ function EditableZoneName({
       {name}
     </button>
   )
-}
+})
 
 function ZoneColorPicker({
   color,
@@ -165,7 +183,7 @@ function ZoneColorPicker({
           id={menuId}
           role="listbox"
           aria-label="Zone color"
-          className="absolute right-0 top-full z-50 mt-1.5 w-[120px] rounded-xl border border-border-panel bg-bg-elevated p-3 shadow-lg animate-[dropdown-enter_150ms_ease-out_both]"
+          className="absolute right-0 top-full z-50 mt-1.5 w-[120px] rounded-xl border border-border-subtle bg-bg-elevated p-3 shadow-lg animate-[dropdown-enter_150ms_ease-out_both]"
         >
           <div className="grid grid-cols-3 gap-2">
             {ZONE_PALETTE.map((swatch) => {
@@ -187,6 +205,103 @@ function ZoneColorPicker({
               )
             })}
           </div>
+          <p className="mt-2 text-[10px] text-text-muted text-center">
+            Zone color · Canvas display only
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ZoneKebabMenu({
+  onRename,
+  onDuplicate,
+  onDelete,
+}: {
+  onRename: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+
+  useEffect(() => {
+    if (!open) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (containerRef.current?.contains(event.target as Node)) return
+      setOpen(false)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  function handleItem(action: () => void) {
+    setOpen(false)
+    action()
+  }
+
+  const menuItemClassName =
+    'flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover'
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls={open ? menuId : undefined}
+        aria-label="Zone menu"
+        onClick={() => setOpen((v) => !v)}
+        className={`flex h-8 w-10 cursor-pointer items-center justify-center rounded-lg bg-bg-active transition-colors duration-[120ms] hover:bg-bg-hover ${
+          open ? 'bg-bg-hover text-text-primary' : 'text-text-secondary'
+        }`}
+      >
+        <KebabIcon className="block shrink-0" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div
+          id={menuId}
+          role="menu"
+          className="absolute top-full right-0 z-50 mt-2 min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleItem(onRename)}
+            className={menuItemClassName}
+          >
+            Rename zone
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleItem(onDuplicate)}
+            className={menuItemClassName}
+          >
+            Duplicate zone
+          </button>
+          <div className="my-1 border-t border-border-subtle" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleItem(onDelete)}
+            className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-status-error transition-colors duration-[120ms] hover:bg-bg-hover"
+          >
+            Delete zone
+          </button>
         </div>
       )}
     </div>
@@ -204,13 +319,23 @@ export function ZoneSettings({
     setMappingType,
     addMapping,
     deleteMapping,
+    presetScale,
+    presetRoot,
+    applySplit,
+    setZones,
+    deleteZone,
   } = useEditorZones()
   const [openMappingIds, setOpenMappingIds] = useState<Set<string>>(new Set())
+  const editableZoneNameRef = useRef<EditableZoneNameHandle>(null)
 
   const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? null
 
   useEffect(() => {
-    setOpenMappingIds(new Set())
+    if (selectedZone) {
+      setOpenMappingIds(new Set(selectedZone.mappings.map((m) => m.id)))
+    } else {
+      setOpenMappingIds(new Set())
+    }
   }, [selectedZoneId])
 
   if (!selectedZone) {
@@ -251,28 +376,62 @@ export function ZoneSettings({
             {String(zoneIndex + 1).padStart(2, '0')}
           </span>
           <EditableZoneName
+            ref={editableZoneNameRef}
             name={selectedZone.name}
             onSave={(name) => onZonePatch(zoneId, { name })}
           />
-          <ZoneColorPicker
-            color={selectedZone.color}
-            onChange={(nextColor) => onZonePatch(zoneId, { color: nextColor })}
+          <ZoneKebabMenu
+            onRename={() => editableZoneNameRef.current?.startEditing()}
+            onDuplicate={() => {
+              const [active, xMin, yMin, xMax, yMax] = selectedZone.position
+              const newXMin = Math.min(1, xMin + 0.03)
+              const newXMax = Math.min(1, xMax + 0.03)
+              const newId = `zone-${Date.now()}`
+              const newZone: EditorZone = {
+                id: newId,
+                name: `${selectedZone.name} copy`,
+                color: selectedZone.color,
+                type: selectedZone.type,
+                active: true,
+                locked: false,
+                position: [active, newXMin, yMin, newXMax, yMax],
+                mappings: selectedZone.mappings.map((m) => ({
+                  ...m,
+                  id: createMappingId(),
+                })),
+              }
+              setZones((prev) => {
+                const idx = prev.findIndex((z) => z.id === zoneId)
+                const next = [...prev]
+                next.splice(idx + 1, 0, newZone)
+                return next
+              })
+            }}
+            onDelete={() => deleteZone(zoneId)}
           />
         </div>
 
-        <div className="flex items-center gap-6" style={{ marginTop: '20px' }}>
-          <div className="inline-flex items-center gap-2">
-            <span className="text-sm font-light text-text-muted">Active</span>
-            <ToggleSwitch
-              checked={selectedZone.active}
-              onChange={(active) => onZonePatch(zoneId, { active })}
-            />
+        <div className="flex items-center" style={{ marginTop: '20px' }}>
+          <div className="flex items-center gap-4">
+            <div className="inline-flex items-center gap-2">
+              <span className="text-sm font-light text-text-muted">Active</span>
+              <ToggleSwitch
+                checked={selectedZone.active}
+                onChange={(active) => onZonePatch(zoneId, { active })}
+              />
+            </div>
+            <div className="inline-flex items-center gap-2">
+              <span className="text-sm font-light text-text-muted">Lock</span>
+              <ToggleSwitch
+                checked={selectedZone.locked}
+                onChange={(locked) => onZonePatch(zoneId, { locked })}
+              />
+            </div>
           </div>
-          <div className="inline-flex items-center gap-2">
-            <span className="text-sm font-light text-text-muted">Lock</span>
-            <ToggleSwitch
-              checked={selectedZone.locked}
-              onChange={(locked) => onZonePatch(zoneId, { locked })}
+          <div className="ml-auto">
+            <ZoneColorPicker
+              color={selectedZone.color}
+              onChange={(nextColor) => onZonePatch(zoneId, { color: nextColor })}
             />
           </div>
         </div>
@@ -281,7 +440,7 @@ export function ZoneSettings({
       <div className={`${zonePanelDividerClassName()} mt-5`} />
 
       <ZonePanelSection className="flex flex-1 flex-col px-5 py-4">
-        <h3 className={zoneSectionLabelClassName()}>MAPPINGS</h3>
+        <h3 className={`${zoneSectionLabelClassName()} mt-2 mb-4`}>MAPPINGS</h3>
 
         <div className="flex flex-col gap-3">
           {selectedZone.mappings.map((mapping) => (
@@ -298,6 +457,12 @@ export function ZoneSettings({
               }
               onUpdate={(patch) => updateMapping(zoneId, mapping.id, patch)}
               onTypeChange={(type) => setMappingType(zoneId, mapping.id, type)}
+              presetScale={presetScale}
+              presetRoot={presetRoot}
+              onApplySplit={() => {
+                applySplit(zoneId, mapping.id)
+                setOpenMappingIds(new Set())
+              }}
               onDelete={() => {
                 setOpenMappingIds((prev) => {
                   const next = new Set(prev)

@@ -39,7 +39,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function EditorPresetMenuDivider() {
-  return <div className="my-1 border-t border-border" role="separator" />
+  return <div className="my-1 border-t border-border-subtle" role="separator" />
 }
 
 const EDITOR_PRESET_MENU_WIDTH_PX = 220
@@ -139,7 +139,7 @@ function EditorPresetKebabMenu({
             id={menuId}
             role="menu"
             style={menuStyle}
-            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg"
+            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
           >
             <button
               type="button"
@@ -221,7 +221,7 @@ const MOCK_ZONES: EditorZone[] = [
       axis: 'Y',
       rootNote: 'C',
       octave: 4,
-      split: { enabled: false, mode: 'Linear', steps: 6 },
+      split: { enabled: false, mode: 'Linear', steps: 6, xDivisions: 2, yDivisions: 2 },
     }],
   },
   {
@@ -239,7 +239,7 @@ const MOCK_ZONES: EditorZone[] = [
       axis: 'Y',
       rootNote: 'C',
       octave: 3,
-      split: { enabled: false, mode: 'Linear', steps: 6 },
+      split: { enabled: false, mode: 'Linear', steps: 6, xDivisions: 2, yDivisions: 2 },
     }],
   },
   {

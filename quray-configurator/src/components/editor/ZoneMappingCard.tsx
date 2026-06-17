@@ -1,5 +1,5 @@
 import { CaretRight, Trash } from '@phosphor-icons/react'
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import {
   createDefaultMapping,
   CV_MODE_OPTIONS,
@@ -13,13 +13,13 @@ import {
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { StepperInput } from '@/components/ui/StepperInput'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { buildScaleNotes, distributeNotes } from '@/utils/scales'
+import { buildScaleNotes, distributeNotes, NOTE_NAMES, SCALES } from '@/utils/scales'
 
 const CHANNEL_OPTIONS = Array.from({ length: 16 }, (_, index) => String(index + 1))
 const GATE_CHANNEL_OPTIONS = ['1', '2', '3', '4']
 
 export function zoneFieldCardClassName() {
-  return 'flex h-12 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active px-3'
+  return 'flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active px-3'
 }
 
 function zoneFieldLabelClassName() {
@@ -37,10 +37,16 @@ function ZoneFieldSelect({
   options: string[]
   onChange: (value: string) => void
 }) {
+  const selectRef = useRef<HTMLSelectElement>(null)
+
   return (
-    <label className={zoneFieldCardClassName()}>
+    <label
+      className={zoneFieldCardClassName()}
+      onClick={() => selectRef.current?.click()}
+    >
       <span className={zoneFieldLabelClassName()}>{label}</span>
       <select
+        ref={selectRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
@@ -107,6 +113,7 @@ export interface ZoneMappingCardProps {
   presetScale?: string
   /** Preset-level root note — defaults to 'C' until wired from context. */
   presetRoot?: string
+  onApplySplit?: () => void
 }
 
 export function ZoneMappingCard({
@@ -118,15 +125,30 @@ export function ZoneMappingCard({
   onDelete,
   presetScale = 'Chromatic',
   presetRoot = 'C',
+  onApplySplit,
 }: ZoneMappingCardProps) {
   const split = mapping.split ?? {
     enabled: false,
     mode: 'Linear' as const,
-    xDivisions: 4,
-    yDivisions: 1,
+    steps: 6,
+    xDivisions: 2,
+    yDivisions: 2,
   }
 
-  const noteCount = (split.xDivisions ?? 4) * (split.yDivisions ?? 1)
+  const rootNoteOptions = useMemo(() => {
+    if (presetScale === 'Chromatic' || !SCALES[presetScale]) {
+      return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    }
+    const rootIdx = NOTE_NAMES.indexOf(presetRoot)
+    const intervals = SCALES[presetScale]
+    const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
+    return intervals.map((semitone, i) => {
+      const noteIdx = (rootIdx + semitone) % 12
+      return `${romanNumerals[i] ?? String(i + 1)} (${NOTE_NAMES[noteIdx]})`
+    })
+  }, [presetScale, presetRoot])
+
+  const noteCount = (split.xDivisions ?? 2) * (split.yDivisions ?? 2)
 
   const splitNotes = useMemo(() => {
     if (!split.enabled) return []
@@ -165,9 +187,9 @@ export function ZoneMappingCard({
       </div>
 
       {isOpen && (
-        <div className="flex flex-col gap-3 border-t border-border-panel px-3 pb-4 pt-3">
+        <div className="flex flex-col gap-3 border-t border-border-subtle px-3 pb-4 pt-3">
           <div
-            className="flex items-center gap-1 rounded-lg border border-border bg-bg-active p-1"
+            className="flex h-11 items-center gap-1 rounded-lg border border-border-subtle bg-bg-active p-1"
             role="tablist"
             aria-label="Mapping type"
           >
@@ -178,7 +200,7 @@ export function ZoneMappingCard({
                 role="tab"
                 aria-selected={mapping.type === option}
                 onClick={() => onTypeChange(option)}
-                className={`flex h-7 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
+                className={`flex h-8 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
                   mapping.type === option
                     ? 'bg-accent text-text-primary'
                     : 'bg-transparent text-text-muted hover:bg-bg-hover'
@@ -207,8 +229,8 @@ export function ZoneMappingCard({
               />
               <ZoneFieldSelect
                 label="Root note"
-                value={mapping.rootNote ?? 'C'}
-                options={[...ROOT_NOTES]}
+                value={mapping.rootNote ?? rootNoteOptions[0]}
+                options={rootNoteOptions}
                 onChange={(rootNote) => onUpdate({ rootNote })}
               />
               <ZoneFieldSelect
@@ -219,7 +241,7 @@ export function ZoneMappingCard({
               />
 
               {/* SPLIT ZONE header row — plain, no card border */}
-              <div className="mt-1 flex items-center justify-between px-1 py-3">
+              <div className="flex items-center justify-between px-1 pb-0 pt-3">
                 <span className="text-xs uppercase tracking-wide text-text-muted">Split Zone</span>
                 <ToggleSwitch
                   checked={split.enabled}
@@ -230,10 +252,10 @@ export function ZoneMappingCard({
               </div>
 
               {split.enabled && (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 mt-1.5">
                   {/* Distribution tabs — same style as the type selector */}
                   <div
-                    className="flex items-center gap-1 rounded-lg border border-border bg-bg-active p-1"
+                    className="flex items-center gap-1 rounded-lg border border-border-subtle bg-bg-active p-1"
                     role="tablist"
                     aria-label="Split distribution"
                   >
@@ -244,7 +266,7 @@ export function ZoneMappingCard({
                         role="tab"
                         aria-selected={split.mode === mode}
                         onClick={() => onUpdate({ split: { ...split, mode } })}
-                        className={`flex h-7 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
+                        className={`flex h-8 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
                           split.mode === mode
                             ? 'bg-accent text-text-primary'
                             : 'bg-transparent text-text-muted hover:bg-bg-hover'
@@ -289,6 +311,16 @@ export function ZoneMappingCard({
                       </span>
                     ))}
                   </div>
+
+                  {onApplySplit && (
+                    <button
+                      type="button"
+                      onClick={onApplySplit}
+                      className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-border-subtle bg-transparent text-sm font-light text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+                    >
+                      Apply split
+                    </button>
+                  )}
                 </div>
               )}
             </>

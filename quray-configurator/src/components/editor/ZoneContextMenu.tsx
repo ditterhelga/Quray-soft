@@ -6,13 +6,17 @@ type ZoneContextMenuProps = {
   x: number
   y: number
   menuId: string
+  isLocked: boolean
+  isActive: boolean
   onDuplicate: () => void
   onDelete: () => void
+  onToggleLocked: () => void
+  onToggleActive: () => void
   onClose: () => void
 }
 
 function ZoneContextMenuDivider() {
-  return <div className="my-1 border-t border-border" role="separator" />
+  return <div className="my-1 border-t border-border-subtle" role="separator" />
 }
 
 export function ZoneContextMenu({
@@ -20,8 +24,12 @@ export function ZoneContextMenu({
   x,
   y,
   menuId,
+  isLocked,
+  isActive,
   onDuplicate,
   onDelete,
+  onToggleLocked,
+  onToggleActive,
   onClose,
 }: ZoneContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -66,7 +74,7 @@ export function ZoneContextMenu({
         left: x,
         zIndex: 50,
       }}
-      className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg"
+      className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
     >
       <button
         type="button"
@@ -90,6 +98,29 @@ export function ZoneContextMenu({
         className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-status-error transition-colors duration-[120ms] hover:bg-bg-hover"
       >
         Delete
+      </button>
+      <ZoneContextMenuDivider />
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          onToggleLocked()
+          onClose()
+        }}
+        className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+      >
+        {isLocked ? 'Unlock' : 'Lock'}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          onToggleActive()
+          onClose()
+        }}
+        className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+      >
+        {isActive ? 'Deactivate' : 'Activate'}
       </button>
     </div>,
     document.body,

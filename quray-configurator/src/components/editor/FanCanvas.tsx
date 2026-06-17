@@ -284,19 +284,6 @@ function buildHatchPattern(
   return ctx.createPattern(offscreen, 'repeat')
 }
 
-function drawLockIcon(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.save()
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
-  ctx.fillStyle   = 'rgba(255, 255, 255, 0.9)'
-  ctx.lineWidth   = 1.25
-
-  ctx.beginPath()
-  ctx.arc(x + 5, y + 4, 3, Math.PI, 0)
-  ctx.stroke()
-
-  ctx.fillRect(x + 2, y + 4, 6, 5)
-  ctx.restore()
-}
 
 function drawZones(
   ctx: CanvasRenderingContext2D,
@@ -348,17 +335,38 @@ function drawZones(
     ctx.stroke()
 
     // --- Zone label ---
-    const OFFSET = 0.04
-    const labelPos = logicalToCanvas(xMin + OFFSET, yMax - OFFSET, S)
-    const numberText = String(i + 1).padStart(2, '0')
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
-    ctx.font = 'bold 15px var(--font-mono, monospace)'
-    ctx.fillText(numberText, labelPos.x, labelPos.y)
+    const PX_OFFSET = 24
+    const span = S.outerR - S.innerR
+    const OFFSET_X = PX_OFFSET / (span * 2)
+    const OFFSET_Y = PX_OFFSET / span
+    const labelPos = logicalToCanvas(xMin + OFFSET_X, yMax - OFFSET_Y, S)
+    ctx.save()
+    ctx.font = 'normal 14px monospace'
+    ctx.fillStyle = 'rgba(238, 239, 252, 0.90)'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText(String(i + 1).padStart(2, '0'), labelPos.x, labelPos.y)
+    ctx.restore()
 
-    // --- Lock icon ---
+    // --- Lock icon (padlock, right of zone number) ---
     if (zone.locked) {
-      const lockP = logicalToCanvas(xMin + 0.04, yMin + 0.06, S)
-      drawLockIcon(ctx, lockP.x, lockP.y)
+      const ICON_SIZE = 9
+      const iconX = labelPos.x + 24
+      const iconY = labelPos.y  // aligned with text top
+
+      ctx.save()
+      // body starts below shackle
+      ctx.fillStyle = 'rgba(238, 239, 252, 0.7)'
+      ctx.beginPath()
+      ctx.roundRect(iconX, iconY + 3, ICON_SIZE, 7, 2)
+      ctx.fill()
+      // shackle arc (top half of circle, from iconY up)
+      ctx.strokeStyle = 'rgba(238, 239, 252, 0.7)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(iconX + ICON_SIZE / 2, iconY + 3, ICON_SIZE / 2 - 1, Math.PI, 0)
+      ctx.stroke()
+      ctx.restore()
     }
 
     // --- Unmapped warning dot ---
@@ -367,12 +375,12 @@ function drawZones(
       const midLy   = (yMin + yMax) / 2
       const centreP = logicalToCanvas(midLx, midLy, S)
       ctx.beginPath()
-      ctx.arc(centreP.x, centreP.y, 5, 0, Math.PI * 2)
+      ctx.arc(centreP.x, centreP.y, 7, 0, Math.PI * 2)
       ctx.fillStyle = '#CC9F2C'   // --color-status-progress
       ctx.fill()
       // Exclamation mark
       ctx.fillStyle = '#000'
-      ctx.font      = 'bold 7px sans-serif'
+      ctx.font      = 'bold 9px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('!', centreP.x, centreP.y)

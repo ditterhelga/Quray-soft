@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -11,12 +12,29 @@ import {
   applyMappingTypeChange,
   cloneMappings,
   createDefaultMapping,
+  createMappingId,
   deriveZoneTypeFromMappings,
   type ZoneMapping,
   type ZoneMappingType,
 } from '@/components/editor/zoneMappings'
-import type { EditorZone } from '@/types'
+import type { EditorZone, GesturePosition } from '@/types'
 import { duplicateZoneRecord } from '@/utils/zoneActions'
+import { buildScaleNotes, distributeNotes } from '@/utils/scales'
+
+const ZONE_PALETTE = [
+  '#6C5BD9', '#5E3B93', '#913F7E', '#A75465', '#B45846',
+  '#B76D3A', '#AC7F39', '#647D46', '#3E8577', '#3E809C',
+  '#426AA8', '#22319F',
+] as const
+
+function shufflePalette(arr: string[]): string[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 type ZoneContextMenuState = {
   zoneId: string
@@ -46,6 +64,13 @@ type EditorZonesContextValue = {
   closeZoneContextMenu: () => void
   toast: ToastState
   dismissToast: () => void
+  /** Preset-level scale name, e.g. 'Chromatic', 'Natural Minor'. */
+  presetScale: string
+  setPresetScale: Dispatch<SetStateAction<string>>
+  /** Preset-level root note, e.g. 'C', 'A'. */
+  presetRoot: string
+  setPresetRoot: Dispatch<SetStateAction<string>>
+  applySplit: (zoneId: string, mappingId: string) => void
 }
 
 const EditorZonesContext = createContext<EditorZonesContextValue | null>(null)
@@ -73,6 +98,16 @@ export function EditorZonesProvider({
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null)
   const [zoneContextMenu, setZoneContextMenu] = useState<ZoneContextMenuState>(null)
   const [toast, setToast] = useState<ToastState>(null)
+  const [presetScale, setPresetScale] = useState('Chromatic')
+  const [presetRoot, setPresetRoot] = useState('C')
+  const colorPoolRef = useRef<string[]>(shufflePalette([...ZONE_PALETTE]))
+
+  function pickNextZoneColor(): string {
+    if (colorPoolRef.current.length === 0) {
+      colorPoolRef.current = shufflePalette([...ZONE_PALETTE])
+    }
+    return colorPoolRef.current.shift()!
+  }
 
   const dismissToast = useCallback(() => {
     setToast(null)
@@ -239,6 +274,75 @@ export function EditorZonesProvider({
     setZoneContextMenu(null)
   }, [])
 
+  const applySplit = useCallback((zoneId: string, mappingId: string) => {
+    setZones((prev) => {
+      const zone = prev.find((z) => z.id === zoneId)
+      if (!zone) return prev
+
+      const mapping = zone.mappings.find((m) => m.id === mappingId)
+      if (!mapping || mapping.type !== 'Note') return prev
+
+      const split = mapping.split
+      if (!split?.enabled) return prev
+
+      const xDiv = split.xDivisions ?? 2
+      const yDiv = split.yDivisions ?? 2
+      const [, xMin, yMin, xMax, yMax] = zone.position as GesturePosition
+
+      const xStep = (xMax - xMin) / xDiv
+      const yStep = (yMax - yMin) / yDiv
+
+      const noteCount = xDiv * yDiv
+      const pool = buildScaleNotes(
+        'Chromatic',
+        mapping.rootNote ?? 'C',
+        mapping.octave ?? 4,
+        noteCount * 3,
+      )
+      const notes = distributeNotes(pool, split.mode, noteCount)
+
+      const newZones: EditorZone[] = []
+      let noteIndex = 0
+
+      for (let yi = 0; yi < yDiv; yi++) {
+        for (let xi = 0; xi < xDiv; xi++) {
+          const cellXMin = xMin + xi * xStep
+          const cellXMax = xMin + (xi + 1) * xStep
+          const cellYMin = yMin + yi * yStep
+          const cellYMax = yMin + (yi + 1) * yStep
+          const note = notes[noteIndex] ?? notes[0]
+          noteIndex++
+
+          const rootNote = note.replace(/\d+$/, '')
+          const octave = parseInt(note.match(/\d+$/)?.[0] ?? '4', 10)
+
+          const newMapping: ZoneMapping = {
+            id: createMappingId(),
+            type: 'Note',
+            channel: mapping.channel,
+            axis: mapping.axis,
+            rootNote,
+            octave,
+            split: { enabled: false, mode: 'Linear', xDivisions: 2, yDivisions: 2 },
+          }
+
+          newZones.push({
+            id: `${zoneId}-split-${xi}-${yi}-${Date.now()}`,
+            name: `${note}`,
+            color: pickNextZoneColor(),
+            type: 'Note',
+            active: true,
+            locked: false,
+            position: [true, cellXMin, cellYMin, cellXMax, cellYMax],
+            mappings: [newMapping],
+          })
+        }
+      }
+
+      return prev.flatMap((z) => (z.id === zoneId ? newZones : [z]))
+    })
+  }, [])
+
   return (
     <EditorZonesContext.Provider
       value={{
@@ -257,6 +361,11 @@ export function EditorZonesProvider({
         closeZoneContextMenu,
         toast,
         dismissToast,
+        presetScale,
+        setPresetScale,
+        presetRoot,
+        setPresetRoot,
+        applySplit,
       }}
     >
       {children}

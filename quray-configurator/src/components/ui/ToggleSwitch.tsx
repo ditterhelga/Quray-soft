@@ -7,7 +7,7 @@ type ToggleSwitchProps = {
 
 export function toggleSwitchTrackClassName(checked: boolean) {
   return `relative h-5 w-9 shrink-0 rounded-full transition-colors duration-[120ms] ${
-    checked ? 'bg-accent' : 'bg-border'
+    checked ? 'bg-accent' : 'bg-border-subtle'
   }`
 }
 
