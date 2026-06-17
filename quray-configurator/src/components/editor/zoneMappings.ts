@@ -76,7 +76,7 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
         ...base,
         port: 1,
         cvMode: 'Pitch',
-        vOct: 'eurorack',
+        vOct: 'eurorack' as const,
         singleValue: false,
         bottom: -5,
         top: 5,
@@ -101,6 +101,34 @@ export function applyMappingTypeChange(
   mapping: ZoneMapping,
   nextType: ZoneMappingType,
 ): ZoneMapping {
+  if (nextType === 'CV') {
+    return ensureMappingFields({
+      ...mapping,
+      type: nextType,
+      channel: mapping.channel,
+      axis: mapping.axis,
+      port: mapping.port,
+      cvMode: mapping.cvMode,
+      vOct: mapping.vOct,
+      singleValue: false,
+      bottom: -5,
+      top: 5,
+    })
+  }
+
+  if (nextType === 'CC') {
+    return ensureMappingFields({
+      ...mapping,
+      type: nextType,
+      channel: mapping.channel,
+      axis: mapping.axis,
+      cc: mapping.cc ?? 74,
+      singleValue: false,
+      bottom: 0,
+      top: 127,
+    })
+  }
+
   return ensureMappingFields({
     ...mapping,
     type: nextType,

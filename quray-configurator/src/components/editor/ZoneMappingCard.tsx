@@ -18,6 +18,22 @@ import { buildScaleNotes, distributeNotes, NOTE_NAMES, SCALES } from '@/utils/sc
 
 const CHANNEL_OPTIONS = Array.from({ length: 16 }, (_, index) => String(index + 1))
 const GATE_CHANNEL_OPTIONS = ['1', '2', '3', '4']
+const cvRowClassName = 'flex h-11 items-center justify-between px-3'
+const mappingSectionClassName = 'flex flex-col gap-2'
+const mappingDividerClassName = 'my-2 border-t border-border-subtle'
+const mappingCheckboxRowClassName = 'flex items-center justify-end px-3 py-1'
+const mappingNumericBoxClassName =
+  'inline-flex h-9 w-[4rem] shrink-0 items-center justify-end rounded-xl border border-border-subtle bg-bg-active pl-2 pr-3'
+const mappingNumericInputClassName =
+  'w-full bg-transparent text-right text-sm font-light text-text-primary tabular-nums outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+
+function mappingTabButtonClassName(active: boolean) {
+  return `flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
+    active
+      ? 'border-transparent bg-accent text-text-primary'
+      : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
+  }`
+}
 
 export function zoneFieldCardClassName() {
   return 'flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active px-3'
@@ -70,11 +86,13 @@ function IntegerTextInput({
   min,
   max,
   onChange,
+  className = textNumericInputClassName,
 }: {
   value: number
   min: number
   max: number
   onChange: (value: number) => void
+  className?: string
 }) {
   const [draft, setDraft] = useState(String(value))
 
@@ -107,9 +125,16 @@ function IntegerTextInput({
       pattern="[0-9]*"
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
+      onFocus={(event) => {
+        const target = event.target
+        setTimeout(() => {
+          const len = target.value.length
+          target.setSelectionRange(len, len)
+        }, 0)
+      }}
       onBlur={() => commit(draft)}
       onKeyDown={handleKeyDown}
-      className={textNumericInputClassName}
+      className={className}
     />
   )
 }
@@ -294,94 +319,121 @@ export function ZoneMappingCard({
               </button>
             ))}
           </div>
-          {mapping.type !== 'Note' && mapping.type !== 'CC' && (
-            <ZoneFieldSelect
-              label="Channel"
-              value={String(mapping.channel)}
-              options={CHANNEL_OPTIONS}
-              onChange={(channel) => onUpdate({ channel: Number(channel) })}
-            />
-          )}
-
           {mapping.type === 'Note' && (
-            <>
-              <ZoneFieldSelect
-                label="Channel"
-                value={String(mapping.channel)}
-                options={CHANNEL_OPTIONS}
-                onChange={(channel) => onUpdate({ channel: Number(channel) })}
-              />
-              <ZoneFieldSelect
-                label="Root note"
-                value={mapping.rootNote ?? rootNoteOptions[0]}
-                options={rootNoteOptions}
-                onChange={(rootNote) => onUpdate({ rootNote })}
-              />
-              <ZoneFieldSelect
-                label="Octave"
-                value={String(mapping.octave ?? 4)}
-                options={['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']}
-                onChange={(v) => onUpdate({ octave: Number(v) })}
-              />
+            <div className={mappingSectionClassName}>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Channel</span>
+                <select
+                  value={String(mapping.channel)}
+                  onChange={(event) => onUpdate({ channel: Number(event.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {CHANNEL_OPTIONS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              {/* SPLIT ZONE header row — plain, no card border */}
-              <div className="flex items-center justify-between px-1 pb-0 pt-3">
+              <div className={mappingDividerClassName} />
+
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Root note</span>
+                <select
+                  value={mapping.rootNote ?? rootNoteOptions[0]}
+                  onChange={(event) => onUpdate({ rootNote: event.target.value })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {rootNoteOptions.map((note) => (
+                    <option key={note} value={note}>
+                      {note}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Octave</span>
+                <select
+                  value={String(mapping.octave ?? 4)}
+                  onChange={(event) => onUpdate({ octave: Number(event.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((octave) => (
+                    <option key={octave} value={octave}>
+                      {octave}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={mappingDividerClassName} />
+
+              <div className={cvRowClassName}>
                 <span className="text-xs uppercase tracking-wide text-text-muted">Split Zone</span>
                 <ToggleSwitch
                   checked={split.enabled}
-                  onChange={(enabled) =>
-                    onUpdate({ split: { ...split, enabled } })
-                  }
+                  onChange={(enabled) => onUpdate({ split: { ...split, enabled } })}
                 />
               </div>
 
               {split.enabled && (
-                <div className="flex flex-col gap-3 mt-1.5">
-                  {/* Distribution tabs — same style as the type selector */}
-                  <div
-                    className="flex items-center gap-1 rounded-lg border border-border-subtle bg-bg-active p-1"
-                    role="tablist"
-                    aria-label="Split distribution"
-                  >
-                    {(['Linear', 'Jump 2', 'Jump 3', 'Random'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="tab"
-                        aria-selected={split.mode === mode}
-                        onClick={() => onUpdate({ split: { ...split, mode } })}
-                        className={`flex h-8 flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-light transition-colors duration-[120ms] ${
-                          split.mode === mode
-                            ? 'bg-accent text-text-primary'
-                            : 'bg-transparent text-text-muted hover:bg-bg-hover'
-                        }`}
-                      >
-                        {mode}
-                      </button>
-                    ))}
+                <div className={mappingSectionClassName}>
+                  <div className={cvRowClassName}>
+                    <span className={zoneFieldLabelClassName()}>Order</span>
+                    <select
+                      value={split.mode}
+                      onChange={(event) =>
+                        onUpdate({
+                          split: {
+                            ...split,
+                            mode: event.target.value as typeof split.mode,
+                          },
+                        })
+                      }
+                      className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                    >
+                      {(['Linear', 'Jump 2', 'Jump 3', 'Random'] as const).map((mode) => (
+                        <option key={mode} value={mode}>
+                          {mode}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* X / Y divisions in a grid row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <ZoneFieldSelect
-                      label="X"
+                  <div className={cvRowClassName}>
+                    <span className={zoneFieldLabelClassName()}>Split X</span>
+                    <select
                       value={String(split.xDivisions)}
-                      options={['1', '2', '3', '4', '5', '6', '7', '8']}
-                      onChange={(v) =>
-                        onUpdate({ split: { ...split, xDivisions: Number(v) } })
+                      onChange={(event) =>
+                        onUpdate({ split: { ...split, xDivisions: Number(event.target.value) } })
                       }
-                    />
-                    <ZoneFieldSelect
-                      label="Y"
+                      className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                    >
+                      {['1', '2', '3', '4', '5', '6', '7', '8'].map((division) => (
+                        <option key={division} value={division}>
+                          {division}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={`${cvRowClassName} mb-1`}>
+                    <span className={zoneFieldLabelClassName()}>Split Y</span>
+                    <select
                       value={String(split.yDivisions)}
-                      options={['1', '2', '3', '4', '5', '6', '7', '8']}
-                      onChange={(v) =>
-                        onUpdate({ split: { ...split, yDivisions: Number(v) } })
+                      onChange={(event) =>
+                        onUpdate({ split: { ...split, yDivisions: Number(event.target.value) } })
                       }
-                    />
+                      className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                    >
+                      {['1', '2', '3', '4', '5', '6', '7', '8'].map((division) => (
+                        <option key={division} value={division}>
+                          {division}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Note preview pills */}
                   <div
                     className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-bg-active px-3 py-2.5"
                     aria-label="Note distribution preview"
@@ -400,53 +452,64 @@ export function ZoneMappingCard({
                     <button
                       type="button"
                       onClick={onApplySplit}
-                      className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-border-subtle bg-transparent text-sm font-light text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+                      className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-border-subtle bg-transparent text-sm font-light text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
                     >
                       Apply split
                     </button>
                   )}
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {mapping.type === 'CC' && (
-            <>
-              <ZoneFieldSelect
-                label="Channel"
-                value={String(mapping.channel)}
-                options={CHANNEL_OPTIONS}
-                onChange={(channel) => onUpdate({ channel: Number(channel) })}
-              />
-              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
-                <span className="shrink-0 text-sm font-light text-text-muted">Axis</span>
+            <div className={mappingSectionClassName}>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Channel</span>
+                <select
+                  value={String(mapping.channel)}
+                  onChange={(event) => onUpdate({ channel: Number(event.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {CHANNEL_OPTIONS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Axis</span>
                 <div className="flex items-center gap-2">
                   {(['Y', 'X'] as const).map((axis) => (
                     <button
                       key={axis}
                       type="button"
                       onClick={() => onUpdate({ axis })}
-                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
-                        mapping.axis === axis
-                          ? 'border-transparent bg-accent text-text-primary'
-                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
-                      }`}
+                      className={mappingTabButtonClassName(mapping.axis === axis)}
                     >
                       {axis}
                     </button>
                   ))}
                 </div>
               </div>
+
+              <div className={mappingDividerClassName} />
+
               {(mapping.ccInputMode ?? 'device') === 'device' && (
                 <>
-                  <div className={zoneFieldCardClassName()}>
-                    <span className="shrink-0 text-sm font-light text-text-muted">Device</span>
+                  <div className={cvRowClassName}>
+                    <span className={zoneFieldLabelClassName()}>Device</span>
                     <select
                       value={mapping.ccDeviceId ?? ''}
                       onChange={(event) => {
                         const deviceId = event.target.value
                         if (deviceId === '__add__') return
-                        onUpdate({ ccDeviceId: deviceId || undefined, ccParamId: undefined, cc: undefined })
+                        onUpdate({
+                          ccDeviceId: deviceId || undefined,
+                          ccParamId: undefined,
+                          cc: undefined,
+                        })
                       }}
                       className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
                     >
@@ -461,8 +524,8 @@ export function ZoneMappingCard({
                     </select>
                   </div>
                   {mapping.ccDeviceId && (
-                    <div className={zoneFieldCardClassName()}>
-                      <span className="shrink-0 text-sm font-light text-text-muted">Parameter</span>
+                    <div className={cvRowClassName}>
+                      <span className={zoneFieldLabelClassName()}>Parameter</span>
                       <select
                         value={mapping.ccParamId ?? ''}
                         onChange={(event) => {
@@ -482,8 +545,8 @@ export function ZoneMappingCard({
                     </div>
                   )}
                   {mapping.ccParamId && (
-                    <div className={zoneFieldCardClassName()}>
-                      <span className="shrink-0 text-sm font-light text-text-muted">CC</span>
+                    <div className={cvRowClassName}>
+                      <span className={zoneFieldLabelClassName()}>CC</span>
                       <span className="text-sm font-light text-text-muted">
                         {mapping.cc ?? '—'} · auto
                       </span>
@@ -492,130 +555,176 @@ export function ZoneMappingCard({
                 </>
               )}
               {(mapping.ccInputMode ?? 'device') === 'manual' && (
-                <div className={zoneFieldCardClassName()}>
-                  <span className="shrink-0 text-sm font-light text-text-muted">CC number</span>
-                  <IntegerTextInput
-                    value={mapping.cc ?? 0}
-                    min={0}
-                    max={127}
-                    onChange={(cc) => onUpdate({ cc })}
-                  />
+                <div className={cvRowClassName}>
+                  <span className={zoneFieldLabelClassName()}>CC number</span>
+                  <div className={mappingNumericBoxClassName}>
+                    <IntegerTextInput
+                      value={mapping.cc ?? 0}
+                      min={0}
+                      max={127}
+                      onChange={(cc) => onUpdate({ cc })}
+                      className={mappingNumericInputClassName}
+                    />
+                  </div>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() =>
-                  onUpdate({
-                    ccInputMode: (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
-                    ccDeviceId: undefined,
-                    ccParamId: undefined,
-                    cc: undefined,
-                  })
-                }
-                className="mb-2 ml-1 flex w-full cursor-pointer items-center gap-2"
-              >
-                <SelectionCheckbox
-                  checked={(mapping.ccInputMode ?? 'device') === 'manual'}
-                  compact
-                  ariaLabel="Manual input"
-                  onToggle={() =>
+              <div className={mappingCheckboxRowClassName}>
+                <button
+                  type="button"
+                  onClick={() =>
                     onUpdate({
-                      ccInputMode: (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
+                      ccInputMode:
+                        (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
                       ccDeviceId: undefined,
                       ccParamId: undefined,
                       cc: undefined,
                     })
                   }
-                />
-                <span className="text-sm font-light text-text-muted">Manual input</span>
-              </button>
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span className="text-sm font-light text-text-muted">Manual input</span>
+                  <SelectionCheckbox
+                    checked={(mapping.ccInputMode ?? 'device') === 'manual'}
+                    compact
+                    ariaLabel="Manual input"
+                    onToggle={() =>
+                      onUpdate({
+                        ccInputMode:
+                          (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
+                        ccDeviceId: undefined,
+                        ccParamId: undefined,
+                        cc: undefined,
+                      })
+                    }
+                  />
+                </button>
+              </div>
+
+              <div className={mappingDividerClassName} />
+
               {!mapping.singleValue ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <ZoneIntegerTextField
-                    label="Bottom"
-                    value={mapping.bottom ?? 0}
-                    min={0}
-                    max={127}
-                    onChange={(bottom) => onUpdate({ bottom })}
-                  />
-                  <ZoneIntegerTextField
-                    label="Top"
-                    value={mapping.top ?? 127}
-                    min={0}
-                    max={127}
-                    onChange={(top) => onUpdate({ top })}
-                  />
-                </div>
+                <>
+                  <div className={cvRowClassName}>
+                    <span className={zoneFieldLabelClassName()}>Min range</span>
+                    <div className={mappingNumericBoxClassName}>
+                      <IntegerTextInput
+                        value={mapping.bottom ?? 0}
+                        min={0}
+                        max={127}
+                        onChange={(bottom) => onUpdate({ bottom })}
+                        className={mappingNumericInputClassName}
+                      />
+                    </div>
+                  </div>
+                  <div className={cvRowClassName}>
+                    <span className={zoneFieldLabelClassName()}>Max range</span>
+                    <div className={mappingNumericBoxClassName}>
+                      <IntegerTextInput
+                        value={mapping.top ?? 127}
+                        min={0}
+                        max={127}
+                        onChange={(top) => onUpdate({ top })}
+                        className={mappingNumericInputClassName}
+                      />
+                    </div>
+                  </div>
+                </>
               ) : (
-                <ZoneIntegerTextField
-                  label="Value"
-                  value={mapping.bottom ?? 0}
-                  min={0}
-                  max={127}
-                  onChange={(bottom) => onUpdate({ bottom, top: bottom })}
-                />
+                <div className={cvRowClassName}>
+                  <span className={zoneFieldLabelClassName()}>Value</span>
+                  <div className={mappingNumericBoxClassName}>
+                    <IntegerTextInput
+                      value={mapping.bottom ?? 0}
+                      min={0}
+                      max={127}
+                      onChange={(bottom) => onUpdate({ bottom })}
+                      className={mappingNumericInputClassName}
+                    />
+                  </div>
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() =>
-                  onUpdate({
-                    singleValue: !mapping.singleValue,
-                    ...(!mapping.singleValue ? { top: mapping.bottom ?? 0 } : {}),
-                  })
-                }
-                className="ml-1 flex w-full cursor-pointer items-center gap-2"
-              >
-                <SelectionCheckbox
-                  checked={mapping.singleValue ?? false}
-                  compact
-                  ariaLabel="Single value"
-                  onToggle={() =>
+              <div className={mappingCheckboxRowClassName}>
+                <button
+                  type="button"
+                  onClick={() =>
                     onUpdate({
                       singleValue: !mapping.singleValue,
                       ...(!mapping.singleValue ? { top: mapping.bottom ?? 0 } : {}),
                     })
                   }
-                />
-                <span className="text-sm font-light text-text-muted">Single value</span>
-              </button>
-            </>
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span className="text-sm font-light text-text-muted">Single value</span>
+                  <SelectionCheckbox
+                    checked={mapping.singleValue ?? false}
+                    compact
+                    ariaLabel="Single value"
+                    onToggle={() =>
+                      onUpdate({
+                        singleValue: !mapping.singleValue,
+                        ...(!mapping.singleValue ? { top: mapping.bottom ?? 0 } : {}),
+                      })
+                    }
+                  />
+                </button>
+              </div>
+            </div>
           )}
 
           {mapping.type === 'CV' && (
-            <>
-              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
-                <span className="shrink-0 text-sm font-light text-text-muted">Port</span>
+            <div className={mappingSectionClassName}>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Channel</span>
+                <select
+                  value={String(mapping.channel)}
+                  onChange={(event) => onUpdate({ channel: Number(event.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {CHANNEL_OPTIONS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Port</span>
                 <div className="flex items-center gap-2">
                   {([1, 2, 3, 4] as const).map((port) => (
                     <button
                       key={port}
                       type="button"
                       onClick={() => onUpdate({ port })}
-                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
-                        (mapping.port ?? 1) === port
-                          ? 'border-transparent bg-accent text-text-primary'
-                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
-                      }`}
+                      className={mappingTabButtonClassName((mapping.port ?? 1) === port)}
                     >
                       CV{port}
                     </button>
                   ))}
                 </div>
               </div>
-              <ZoneFieldSelect
-                label="Mode"
-                value={mapping.cvMode ?? 'Pitch'}
-                options={CV_MODE_OPTIONS.map((option) => option.label)}
-                onChange={(label) => {
-                  const match = CV_MODE_OPTIONS.find((option) => option.label === label)
-                  if (match) {
-                    onUpdate({ cvMode: match.value })
-                  }
-                }}
-              />
-              {mapping.cvMode === 'Pitch' && (
-                <div className={zoneFieldCardClassName()}>
-                  <span className="shrink-0 text-sm font-light text-text-muted">V/oct</span>
+              <div className={mappingDividerClassName} />
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Mode</span>
+                <select
+                  value={mapping.cvMode ?? 'Pitch'}
+                  onChange={(event) => {
+                    const match = CV_MODE_OPTIONS.find((option) => option.label === event.target.value)
+                    if (match) {
+                      onUpdate({ cvMode: match.value })
+                    }
+                  }}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {CV_MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.label}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {(mapping.cvMode ?? 'Pitch') === 'Pitch' && (
+                <div className={cvRowClassName}>
+                  <span className={zoneFieldLabelClassName()}>V/oct</span>
                   <select
                     value={mapping.vOct ?? 'eurorack'}
                     onChange={(event) =>
@@ -628,117 +737,147 @@ export function ZoneMappingCard({
                   </select>
                 </div>
               )}
-              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-active pl-3 pr-1.5">
-                <span className="shrink-0 text-sm font-light text-text-muted">Axis</span>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Axis</span>
                 <div className="flex items-center gap-2">
                   {(['Y', 'X'] as const).map((axis) => (
                     <button
                       key={axis}
                       type="button"
                       onClick={() => onUpdate({ axis })}
-                      className={`flex h-8 w-9 cursor-pointer items-center justify-center rounded-[calc(var(--radius-xl)-2px)] border text-xs font-light outline-none focus:outline-none focus-visible:outline-none ${
-                        mapping.axis === axis
-                          ? 'border-transparent bg-accent text-text-primary'
-                          : 'border-border-subtle bg-bg-active text-text-muted hover:bg-bg-hover'
-                      }`}
+                      className={mappingTabButtonClassName(mapping.axis === axis)}
                     >
                       {axis}
                     </button>
                   ))}
                 </div>
               </div>
-              {!mapping.singleValue ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <ZoneDecimalTextField
-                    label="Bottom"
-                    value={mapping.bottom ?? -5}
-                    min={-5}
-                    max={5}
-                    suffix="V"
-                    onChange={(bottom) => onUpdate({ bottom })}
-                  />
-                  <ZoneDecimalTextField
-                    label="Top"
-                    value={mapping.top ?? 5}
-                    min={-5}
-                    max={5}
-                    suffix="V"
-                    onChange={(top) => onUpdate({ top })}
-                  />
-                </div>
-              ) : (
-                <ZoneDecimalTextField
-                  label="Value"
+              <div className={mappingDividerClassName} />
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>
+                  {mapping.singleValue ? 'Value' : 'Bottom'}
+                </span>
+                <StepperInput
                   value={mapping.bottom ?? -5}
                   min={-5}
                   max={5}
-                  suffix="V"
-                  onChange={(bottom) => onUpdate({ bottom })}
+                  step={0.1}
+                  onChange={(v) => onUpdate({ bottom: Math.round(v * 10) / 10 })}
+                  formatValue={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} V`}
                 />
+              </div>
+              {!mapping.singleValue && (
+                <div className={cvRowClassName}>
+                  <span className={zoneFieldLabelClassName()}>Top</span>
+                  <StepperInput
+                    value={mapping.top ?? 5}
+                    min={-5}
+                    max={5}
+                    step={0.1}
+                    onChange={(v) => onUpdate({ top: Math.round(v * 10) / 10 })}
+                    formatValue={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} V`}
+                  />
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() =>
-                  onUpdate({
-                    singleValue: !mapping.singleValue,
-                    ...(!mapping.singleValue ? { top: mapping.bottom ?? -5 } : {}),
-                  })
-                }
-                className="flex w-full cursor-pointer items-center justify-end gap-2"
-              >
-                <span className="text-sm font-light text-text-muted">Single value</span>
-                <SelectionCheckbox
-                  checked={mapping.singleValue ?? false}
-                  compact
-                  ariaLabel="Single value"
-                  onToggle={() =>
+              <div className={mappingCheckboxRowClassName}>
+                <button
+                  type="button"
+                  onClick={() =>
                     onUpdate({
                       singleValue: !mapping.singleValue,
                       ...(!mapping.singleValue ? { top: mapping.bottom ?? -5 } : {}),
                     })
                   }
-                />
-              </button>
-            </>
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span className="text-sm font-light text-text-muted">Single value</span>
+                  <SelectionCheckbox
+                    checked={mapping.singleValue ?? false}
+                    compact
+                    ariaLabel="Single value"
+                    onToggle={() =>
+                      onUpdate({
+                        singleValue: !mapping.singleValue,
+                        ...(!mapping.singleValue ? { top: mapping.bottom ?? -5 } : {}),
+                      })
+                    }
+                  />
+                </button>
+              </div>
+            </div>
           )}
 
           {mapping.type === 'CV note' && (
-            <>
-              <ZoneFieldSelect
-                label="Root note"
-                value={mapping.rootNote ?? 'C'}
-                options={[...ROOT_NOTES]}
-                onChange={(rootNote) => onUpdate({ rootNote })}
-              />
-              <div className={zoneFieldCardClassName()}>
-                <span className={zoneFieldLabelClassName()}>Octave</span>
-                <StepperInput
-                  value={mapping.octave ?? 4}
-                  min={0}
-                  max={8}
-                  onChange={(octave) => onUpdate({ octave })}
-                />
+            <div className={mappingSectionClassName}>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Channel</span>
+                <select
+                  value={String(mapping.channel)}
+                  onChange={(e) => onUpdate({ channel: Number(e.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {CHANNEL_OPTIONS.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
+                </select>
               </div>
-              <SegmentedControl
-                value={String(mapping.port ?? 1)}
-                options={[
-                  { value: '1', label: 'CV1' },
-                  { value: '2', label: 'CV2' },
-                  { value: '3', label: 'CV3' },
-                  { value: '4', label: 'CV4' },
-                ]}
-                onChange={(port) => onUpdate({ port: Number(port) })}
-                ariaLabel="CV note port"
-              />
-              <ZoneFieldSelect
-                label="Gate channel"
-                value={String(mapping.gateChannel ?? 1)}
-                options={GATE_CHANNEL_OPTIONS}
-                onChange={(gateChannel) =>
-                  onUpdate({ gateChannel: Number(gateChannel) })
-                }
-              />
-            </>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Port</span>
+                <div className="flex items-center gap-2">
+                  {([1, 2, 3, 4] as const).map((port) => (
+                    <button key={port} type="button"
+                      onClick={() => onUpdate({ port })}
+                      className={mappingTabButtonClassName((mapping.port ?? 1) === port)}
+                    >
+                      CV{port}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={mappingDividerClassName} />
+
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Root note</span>
+                <select
+                  value={mapping.rootNote ?? 'C'}
+                  onChange={(e) => onUpdate({ rootNote: e.target.value })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {[...ROOT_NOTES].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Octave</span>
+                <select
+                  value={String(mapping.octave ?? 4)}
+                  onChange={(e) => onUpdate({ octave: Number(e.target.value) })}
+                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                >
+                  {['-1','0','1','2','3','4','5','6','7','8','9'].map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+
+              <div className={mappingDividerClassName} />
+
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Gate</span>
+                <div className="flex items-center gap-2">
+                  {([1, 2, 3, 4] as const).map((ch) => {
+                    const isUsedByPort = ch === (mapping.port ?? 1)
+                    return (
+                      <button
+                        key={ch}
+                        type="button"
+                        disabled={isUsedByPort}
+                        onClick={() => !isUsedByPort && onUpdate({ gateChannel: ch })}
+                        className={`${mappingTabButtonClassName((mapping.gateChannel ?? 2) === ch)} ${isUsedByPort ? 'opacity-30 cursor-not-allowed' : ''}`}
+                      >
+                        CV{ch}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
