@@ -5,15 +5,44 @@ import {
   Plus,
   UploadSimple,
 } from '@phosphor-icons/react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { FanCanvas } from '@/components/editor/FanCanvas'
+import { ZoneSettings } from '@/components/editor/ZoneSettings'
+import { useEditorZones } from '@/context/EditorZonesContext'
 import { libraryToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import type { EditorZone, GesturePosition } from '@/types'
 
+const ZONE_PALETTE = [
+  '#6C5BD9',
+  '#5E3B93',
+  '#913F7E',
+  '#A75465',
+  '#B45846',
+  '#B76D3A',
+  '#AC7F39',
+  '#647D46',
+  '#3E8577',
+  '#3E809C',
+  '#426AA8',
+  '#22319F',
+] as const
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 function EditorPresetMenuDivider() {
   return <div className="my-1 border-t border-border" role="separator" />
 }
+
+const EDITOR_PRESET_MENU_WIDTH_PX = 220
 
 function EditorPresetKebabMenu({
   outlinedButtonClassName,
@@ -21,19 +50,52 @@ function EditorPresetKebabMenu({
   outlinedButtonClassName: string
 }) {
   const [open, setOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
   const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
 
   useEffect(() => {
     if (!open) return
 
+    function updatePosition() {
+      const anchor = containerRef.current
+      if (!anchor) return
+
+      const rect = anchor.getBoundingClientRect()
+      setMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: Math.max(8, rect.right - EDITOR_PRESET_MENU_WIDTH_PX),
+        zIndex: 50,
+      })
+    }
+
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
     function handlePointerDown(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false)
+      const target = event.target as Node
+
+      if (containerRef.current?.contains(target)) {
+        return
       }
+
+      if (menuRef.current?.contains(target)) {
+        return
+      }
+
+      setOpen(false)
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -70,48 +132,52 @@ function EditorPresetKebabMenu({
         <DotsThree size={16} weight="regular" className="shrink-0" aria-hidden="true" />
       </button>
 
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[220px] animate-[dropdown-enter-up_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => handleItemClick(() => console.log('Rename preset'))}
-            className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            id={menuId}
+            role="menu"
+            style={menuStyle}
+            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border bg-bg-active py-1 shadow-lg"
           >
-            Rename preset
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => handleItemClick(() => console.log('Duplicate preset'))}
-            className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
-          >
-            Duplicate preset
-          </button>
-          <EditorPresetMenuDivider />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => handleItemClick(() => console.log('Export preset'))}
-            className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
-          >
-            Export preset
-          </button>
-          <EditorPresetMenuDivider />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => handleItemClick(() => console.log('Delete preset'))}
-            className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-status-error transition-colors duration-[120ms] hover:bg-bg-hover"
-          >
-            Delete preset
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleItemClick(() => console.log('Rename preset'))}
+              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+            >
+              Rename preset
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleItemClick(() => console.log('Duplicate preset'))}
+              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+            >
+              Duplicate preset
+            </button>
+            <EditorPresetMenuDivider />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleItemClick(() => console.log('Export preset'))}
+              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
+            >
+              Export preset
+            </button>
+            <EditorPresetMenuDivider />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleItemClick(() => console.log('Delete preset'))}
+              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-status-error transition-colors duration-[120ms] hover:bg-bg-hover"
+            >
+              Delete preset
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
@@ -124,30 +190,67 @@ const MOCK_ZONES: EditorZone[] = [
   {
     id: 'z1',
     name: 'Filter Sweep',
-    color: '#5B8EE6',
+    color: ZONE_PALETTE[0],
     type: 'CC',
+    active: true,
+    locked: false,
     position: [true, 0.0, 0.2, 0.25, 0.9],
+    mappings: [{
+      id: 'z1-m1',
+      type: 'CC',
+      channel: 1,
+      axis: 'Y',
+      cc: 74,
+      singleValue: false,
+      bottom: 0,
+      top: 127,
+    }],
   },
   {
     id: 'z2',
     name: 'Root Note',
-    color: '#7BB15B',
+    color: ZONE_PALETTE[1],
     type: 'Note',
+    active: true,
+    locked: false,
     position: [true, 0.25, 0.3, 0.55, 1.0],
+    mappings: [{
+      id: 'z2-m1',
+      type: 'Note',
+      channel: 1,
+      axis: 'Y',
+      rootNote: 'C',
+      octave: 4,
+      split: { enabled: false, mode: 'Linear', steps: 6 },
+    }],
   },
   {
     id: 'z3',
     name: 'Sub Octave',
-    color: '#CC9F2C',
+    color: ZONE_PALETTE[2],
     type: 'Note',
+    active: true,
+    locked: false,
     position: [true, 0.55, 0.1, 0.8, 0.85],
+    mappings: [{
+      id: 'z3-m1',
+      type: 'Note',
+      channel: 1,
+      axis: 'Y',
+      rootNote: 'C',
+      octave: 3,
+      split: { enabled: false, mode: 'Linear', steps: 6 },
+    }],
   },
   {
     id: 'z4',
     name: 'Unmapped',
-    color: '#8D95B2',
+    color: ZONE_PALETTE[3],
     type: null,
+    active: true,
+    locked: false,
     position: [true, 0.8, 0.2, 1.0, 0.7],
+    mappings: [],
   },
 ]
 
@@ -156,35 +259,65 @@ const MOCK_ZONES: EditorZone[] = [
 // ---------------------------------------------------------------------------
 
 export function Editor() {
-  const [zones, setZones]               = useState<EditorZone[]>(MOCK_ZONES)
-  const [selectedZoneId, setSelectedId] = useState<string | null>(null)
-  const [drawMode, setDrawMode]         = useState(false)
+  const {
+    zones,
+    setZones,
+    selectedZoneId,
+    setSelectedZoneId,
+    openZoneContextMenu,
+  } = useEditorZones()
+  const [drawMode, setDrawMode] = useState(false)
 
-  const zoneIdCounter = useId()   // stable prefix for generated ids
+  const zoneIdCounter = useId()
+  const colorPoolRef = useRef<string[]>(shuffle([...ZONE_PALETTE]))
+
+  function pickNextZoneColor(): string {
+    if (colorPoolRef.current.length === 0) {
+      colorPoolRef.current = shuffle([...ZONE_PALETTE])
+    }
+    return colorPoolRef.current.shift()!
+  }
+
+  useEffect(() => {
+    setZones(MOCK_ZONES)
+    setSelectedZoneId(null)
+  }, [setZones, setSelectedZoneId])
 
   const handleZoneSelect = useCallback((id: string | null) => {
-    setSelectedId(id)
+    setSelectedZoneId(id)
     if (id !== null) setDrawMode(false)
-  }, [])
+  }, [setSelectedZoneId])
 
   const handleZoneCreate = useCallback((position: GesturePosition) => {
     const newZone: EditorZone = {
       id:       `${zoneIdCounter}-${Date.now()}`,
       name:     `Zone ${zones.length + 1}`,
-      color:    '#5145F2',
+      color:    pickNextZoneColor(),
       type:     null,
+      active:   true,
+      locked:   false,
       position,
+      mappings: [],
     }
     setZones(prev => [...prev, newZone])
-    setSelectedId(newZone.id)
+    setSelectedZoneId(newZone.id)
     setDrawMode(false)
-  }, [zones.length, zoneIdCounter])
+  }, [zones.length, zoneIdCounter, setZones, setSelectedZoneId])
 
   const handleZoneUpdate = useCallback((id: string, position: GesturePosition) => {
     setZones(prev =>
       prev.map(z => (z.id === id ? { ...z, position } : z)),
     )
   }, [])
+
+  const handleZonePatch = useCallback((
+    id: string,
+    patch: Partial<Pick<EditorZone, 'name' | 'color' | 'type' | 'active' | 'locked'>>,
+  ) => {
+    setZones(prev =>
+      prev.map(z => (z.id === id ? { ...z, ...patch } : z)),
+    )
+  }, [setZones])
 
   const outlinedButtonClassName = libraryOutlinedButtonClassName()
 
@@ -216,7 +349,7 @@ export function Editor() {
                   type="button"
                   className={outlinedButtonClassName}
                   onClick={() => {
-                    setSelectedId(null)
+                    setSelectedZoneId(null)
                     setDrawMode(true)
                   }}
                 >
@@ -240,14 +373,17 @@ export function Editor() {
           </header>
 
           <div className="relative min-h-0 flex-1">
-            <FanCanvas
-              zones={zones}
-              selectedZoneId={selectedZoneId}
-              drawMode={drawMode}
-              onZoneSelect={handleZoneSelect}
-              onZoneCreate={handleZoneCreate}
-              onZoneUpdate={handleZoneUpdate}
-            />
+            <div className="absolute inset-4 overflow-hidden rounded-2xl border border-border-panel bg-bg-base">
+              <FanCanvas
+                zones={zones}
+                selectedZoneId={selectedZoneId}
+                drawMode={drawMode}
+                onZoneSelect={handleZoneSelect}
+                onZoneCreate={handleZoneCreate}
+                onZoneUpdate={handleZoneUpdate}
+                onZoneContextMenu={openZoneContextMenu}
+              />
+            </div>
           </div>
         </main>
         <aside
@@ -257,50 +393,18 @@ export function Editor() {
             background: 'var(--color-bg-sidebar)',
           }}
         >
-          <ZoneSettings selectedZoneId={selectedZoneId} zones={zones} />
+          <ZoneSettings
+            selectedZoneId={selectedZoneId}
+            zones={zones}
+            onZonePatch={handleZonePatch}
+            onAddZone={() => {
+              setSelectedZoneId(null)
+              setDrawMode(true)
+            }}
+          />
         </aside>
       </div>
     </div>
   )
 }
 
-function ZoneSettings({
-  selectedZoneId,
-  zones,
-}: {
-  selectedZoneId: string | null
-  zones: EditorZone[]
-}) {
-  const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? null
-
-  if (!selectedZone) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-5 py-4 text-sm text-text-muted">
-        Select a zone to edit
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col px-5 py-4">
-      <div className="flex items-center gap-2">
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: selectedZone.color }}
-          aria-hidden="true"
-        />
-        <h2 className="text-base text-text-primary">{selectedZone.name}</h2>
-      </div>
-
-      <section className="mt-6">
-        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Mapping</h3>
-        <p className="text-sm text-text-muted">Note / CC / CV configuration coming soon.</p>
-      </section>
-
-      <section className="mt-6">
-        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Axis</h3>
-        <p className="text-sm text-text-muted">Y / X / Entry / Exit coming soon.</p>
-      </section>
-    </div>
-  )
-}

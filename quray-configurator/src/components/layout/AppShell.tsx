@@ -5,6 +5,8 @@ import {
   useDeviceSettings,
 } from '@/context/DeviceSettingsContext'
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext'
+import { EditorZonesProvider } from '@/context/EditorZonesContext'
+import { EditorZoneOverlays } from '@/components/editor/EditorZoneOverlays'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 
@@ -30,6 +32,7 @@ function AppShellContent() {
         </div>
       </div>
       <DeviceSettingsModal open={isOpen} onClose={closeDeviceSettings} />
+      <EditorZoneOverlays />
     </>
   )
 }
@@ -38,7 +41,9 @@ export function AppShell() {
   return (
     <DeviceSettingsProvider>
       <SidebarProvider>
-        <AppShellContent />
+        <EditorZonesProvider>
+          <AppShellContent />
+        </EditorZonesProvider>
       </SidebarProvider>
     </DeviceSettingsProvider>
   )

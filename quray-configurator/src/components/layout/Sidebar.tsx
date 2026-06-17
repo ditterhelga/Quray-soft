@@ -12,9 +12,17 @@ import {
   SquaresFour,
   WarningCircle,
 } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEditorZones } from '@/context/EditorZonesContext'
+import type { EditorZone } from '@/types'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Divider } from '@/components/ui/Divider'
+
+function editorZoneStatusSubLabel(zone: EditorZone): string | null {
+  const parts: string[] = []
+  if (zone.locked) parts.push('Locked')
+  if (!zone.active) parts.push('Inactive')
+  return parts.length > 0 ? parts.join(' · ') : null
+}
 import { AccountRow } from '@/components/layout/AccountRow'
 import { NavItem } from '@/components/layout/NavItem'
 
@@ -27,37 +35,6 @@ const MOCK_PRESET = {
 
 const mockSyncStatus = 'not-synced' as 'synced' | 'not-synced'
 const mockAutosaveStatus = 'saved' as 'saving' | 'saved' | 'error'
-
-const MOCK_ZONES = [
-  {
-    id: 'z1',
-    name: 'Filter Sweep',
-    subtitle: 'Filter Cutoff · Y axis',
-    type: 'CC',
-    color: '#5B8EE6',
-  },
-  {
-    id: 'z2',
-    name: 'Root Note',
-    subtitle: 'Pitch · Pressure',
-    type: 'Note',
-    color: '#7BB15B',
-  },
-  {
-    id: 'z3',
-    name: 'Sub Octave',
-    subtitle: 'Sub Bass · Lower arc',
-    type: 'Note',
-    color: '#CC9F2C',
-  },
-  {
-    id: 'z4',
-    name: 'Unmapped',
-    subtitle: '',
-    type: null,
-    color: '#8D95B2',
-  },
-]
 
 const RECENT_PRESETS = [
   {
@@ -96,8 +73,7 @@ export function Sidebar({
   const location = useLocation()
   const isEditor = location.pathname === '/editor'
   const navigate = useNavigate()
-
-  const [selectedZoneId, setSelectedZoneId] = useState(MOCK_ZONES[0].id)
+  const { zones, selectedZoneId, setSelectedZoneId, openZoneContextMenu } = useEditorZones()
 
   return (
     <aside
@@ -160,11 +136,11 @@ export function Sidebar({
           <div className="min-h-0 flex-1" aria-hidden="true" />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
-            <div className="px-4 pt-4">
+            <div className="px-6 pt-4">
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="relative flex h-12 w-full cursor-pointer items-center gap-3 px-4 rounded-xl border border-transparent bg-transparent text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
+                className="relative flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-2 text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
               >
                 <ArrowLeft size={20} className="shrink-0" />
                 <span>Back to Library</span>
@@ -185,7 +161,12 @@ export function Sidebar({
                 <span className="opacity-30">·</span>
 
                 {mockAutosaveStatus === 'saving' && <span>Saving…</span>}
-                {mockAutosaveStatus === 'saved' && <span>Autosaved</span>}
+                {mockAutosaveStatus === 'saved' && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusOnIcon className="h-3 w-3 shrink-0 text-status-positive" />
+                    Autosaved
+                  </span>
+                )}
                 {mockAutosaveStatus === 'error' && (
                   <span className="flex items-center gap-1 text-status-error">
                     <WarningCircle size={12} />
@@ -251,14 +232,20 @@ export function Sidebar({
               </p>
 
               <ul className="flex flex-col gap-3 px-4">
-                {MOCK_ZONES.map((zone, index) => {
+                {zones.map((zone, index) => {
                   const isSelected = zone.id === selectedZoneId
+                  const statusSubLabel = editorZoneStatusSubLabel(zone)
 
                   return (
                     <li key={zone.id}>
                       <button
                         type="button"
                         onClick={() => setSelectedZoneId(zone.id)}
+                        onContextMenu={(event) => {
+                          event.preventDefault()
+                          setSelectedZoneId(zone.id)
+                          openZoneContextMenu(zone.id, event.clientX, event.clientY)
+                        }}
                         className={`flex items-center h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
                           isSelected ? 'relative' : ''
                         }`}
@@ -272,13 +259,20 @@ export function Sidebar({
                         <span className="mr-5 shrink-0 text-sm font-medium text-text-muted">
                           {String(index + 1).padStart(2, '0')}
                         </span>
-                        <span
-                          className={`min-w-0 truncate text-sm font-light ${
-                            isSelected ? 'text-text-primary' : 'text-text-muted'
-                          }`}
-                        >
-                          {zone.name}
-                        </span>
+                        <div className="min-w-0 flex-1 text-left">
+                          <span
+                            className={`block truncate text-sm font-light ${
+                              isSelected ? 'text-text-primary' : 'text-text-muted'
+                            }`}
+                          >
+                            {zone.name}
+                          </span>
+                          {statusSubLabel && (
+                            <span className="block text-[10px] leading-tight text-text-muted">
+                              {statusSubLabel}
+                            </span>
+                          )}
+                        </div>
                         <span
                           className="ml-auto h-[10px] w-[10px] shrink-0 rounded-sm"
                           style={{ background: zone.color }}

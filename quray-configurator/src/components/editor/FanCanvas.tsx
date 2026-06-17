@@ -41,6 +41,7 @@ export interface FanCanvasProps {
   onZoneSelect: (id: string | null) => void
   onZoneCreate: (position: GesturePosition) => void
   onZoneUpdate: (id: string, position: GesturePosition) => void
+  onZoneContextMenu?: (zoneId: string, clientX: number, clientY: number) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -56,10 +57,9 @@ const EDGE_TOLERANCE = 0.025
 /** Minimum zone size in logical units (prevents zero-area zones). */
 const MIN_ZONE_SIZE = 0.01
 
-/** Sector geometry with cy tuned for vertical centering in the editor canvas. */
+/** Sector geometry for the editor canvas (uses shared sectorForCanvas centering). */
 function editorSectorGeometry(w: number, h: number): SectorGeometry {
-  const S = sectorForCanvas({ width: w, height: h })
-  return { ...S, cy: h * 0.75 + S.innerR }
+  return sectorForCanvas({ width: w, height: h })
 }
 
 // ---------------------------------------------------------------------------
@@ -137,13 +137,29 @@ function hitTestSelectedZoneInteraction(
  * AABB hit-test in logical space. Returns the index of the topmost
  * (last in array) zone under the logical point, or -1.
  */
-function hitTestZones(lx: number, ly: number, zones: EditorZone[]): number {
+function hitTestZonesAtPoint(
+  lx: number,
+  ly: number,
+  zones: EditorZone[],
+  { includeLocked = false }: { includeLocked?: boolean } = {},
+): number {
   for (let i = zones.length - 1; i >= 0; i--) {
-    const [active, xMin, yMin, xMax, yMax] = zones[i].position
-    if (!active) continue
+    const zone = zones[i]
+    if (!includeLocked && zone.locked) continue
+
+    const [, xMin, yMin, xMax, yMax] = zone.position
     if (lx >= xMin && lx <= xMax && ly >= yMin && ly <= yMax) return i
   }
   return -1
+}
+
+function hitTestZones(lx: number, ly: number, zones: EditorZone[]): number {
+  return hitTestZonesAtPoint(lx, ly, zones)
+}
+
+function isZoneLocked(zones: EditorZone[], zoneId: string | null): boolean {
+  if (!zoneId) return false
+  return zones.find((zone) => zone.id === zoneId)?.locked ?? false
 }
 
 /**
@@ -200,7 +216,6 @@ function drawSectorBackground(
 ) {
   const bgBase    = getCssVar('--color-bg-base')       || '#151621'
   const bgSurface = getCssVar('--color-bg-surface')    || '#13131F'
-  const borderCol = getCssVar('--color-border')        || '#282A53'
 
   // Full canvas background
   ctx.fillStyle = bgBase
@@ -216,7 +231,7 @@ function drawSectorBackground(
   sectorRectPath(ctx, S, 0, 0, 1, 1)
   ctx.clip()
 
-  ctx.strokeStyle = borderCol
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'
   ctx.lineWidth = 0.5
 
   // Angular spokes (vertical in logical space)
@@ -269,6 +284,20 @@ function buildHatchPattern(
   return ctx.createPattern(offscreen, 'repeat')
 }
 
+function drawLockIcon(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+  ctx.fillStyle   = 'rgba(255, 255, 255, 0.9)'
+  ctx.lineWidth   = 1.25
+
+  ctx.beginPath()
+  ctx.arc(x + 5, y + 4, 3, Math.PI, 0)
+  ctx.stroke()
+
+  ctx.fillRect(x + 2, y + 4, 6, 5)
+  ctx.restore()
+}
+
 function drawZones(
   ctx: CanvasRenderingContext2D,
   S: SectorGeometry,
@@ -280,16 +309,19 @@ function drawZones(
   for (let i = 0; i < zones.length; i++) {
     const zone   = zones[i]
     const pos    = livePositions.get(zone.id) ?? zone.position
-    const [active, xMin, yMin, xMax, yMax] = pos
-    if (!active) continue
+    const [, xMin, yMin, xMax, yMax] = pos
 
     const isSelected = zone.id === selectedZoneId
     const isMapped   = zone.type !== null
+    const isInactive = !zone.active
 
     // --- Fill ---
     sectorRectPath(ctx, S, xMin, yMin, xMax, yMax)
 
-    if (!isMapped && hatchPattern) {
+    if (isInactive) {
+      ctx.fillStyle = 'rgba(141, 149, 178, 0.18)'
+      ctx.fill()
+    } else if (!isMapped && hatchPattern) {
       // Hatch pattern first, then translucent grey tint on top
       ctx.fillStyle = hatchPattern
       ctx.fill()
@@ -305,20 +337,32 @@ function drawZones(
 
     // --- Stroke ---
     sectorRectPath(ctx, S, xMin, yMin, xMax, yMax)
-    ctx.strokeStyle = isSelected
-      ? zone.color
-      : hexToRgba(zone.color, 0.55)
+    if (isInactive) {
+      ctx.strokeStyle = 'rgba(141, 149, 178, 0.4)'
+    } else {
+      ctx.strokeStyle = isSelected
+        ? zone.color
+        : hexToRgba(zone.color, 0.55)
+    }
     ctx.lineWidth = isSelected ? 2 : 1
     ctx.stroke()
 
     // --- Zone label ---
-    const labelP = logicalToCanvas(xMin + 0.02, yMin + 0.05, S)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-    ctx.font      = 'bold 11px var(--font-mono, monospace)'
-    ctx.fillText(String(i + 1).padStart(2, '0'), labelP.x, labelP.y)
+    const OFFSET = 0.04
+    const labelPos = logicalToCanvas(xMin + OFFSET, yMax - OFFSET, S)
+    const numberText = String(i + 1).padStart(2, '0')
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+    ctx.font = 'bold 15px var(--font-mono, monospace)'
+    ctx.fillText(numberText, labelPos.x, labelPos.y)
+
+    // --- Lock icon ---
+    if (zone.locked) {
+      const lockP = logicalToCanvas(xMin + 0.04, yMin + 0.06, S)
+      drawLockIcon(ctx, lockP.x, lockP.y)
+    }
 
     // --- Unmapped warning dot ---
-    if (!isMapped) {
+    if (!isMapped && !isInactive) {
       const midLx   = (xMin + xMax) / 2
       const midLy   = (yMin + yMax) / 2
       const centreP = logicalToCanvas(midLx, midLy, S)
@@ -404,6 +448,7 @@ export function FanCanvas({
   onZoneSelect,
   onZoneCreate,
   onZoneUpdate,
+  onZoneContextMenu,
 }: FanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -551,7 +596,7 @@ export function FanCanvas({
 
     const selId = selectedIdRef.current
     const selZone = selId ? zonesRef.current.find(z => z.id === selId) : null
-    if (selZone) {
+    if (selZone && !selZone.locked) {
       const pos = livePositions.current.get(selZone.id) ?? selZone.position
       const interaction = hitTestSelectedZoneInteraction(L.x, L.y, pos)
       if (interaction === 'edge-left' || interaction === 'edge-right') {
@@ -605,7 +650,7 @@ export function FanCanvas({
 
     const selId   = selectedIdRef.current
     const selZone = selId ? zonesRef.current.find(z => z.id === selId) : null
-    if (selZone) {
+    if (selZone && !selZone.locked) {
       const pos = livePositions.current.get(selZone.id) ?? selZone.position
       const interaction = hitTestSelectedZoneInteraction(L.x, L.y, pos)
       if (
@@ -633,7 +678,7 @@ export function FanCanvas({
     onZoneSelect(zone.id)
 
     // If clicking the already-selected zone, start move
-    if (zone.id === selId) {
+    if (zone.id === selId && !zone.locked) {
       const pos = livePositions.current.get(zone.id) ?? zone.position
       drag.current.type          = 'move'
       drag.current.zoneId        = zone.id
@@ -659,6 +704,7 @@ export function FanCanvas({
       if (d.type === 'create') return
 
       if (!d.zoneId || !d.startPosition) return
+      if (isZoneLocked(zonesRef.current, d.zoneId)) return
 
       const { w, h } = sizeRef.current
       const S        = editorSectorGeometry(w, h)
@@ -698,10 +744,14 @@ export function FanCanvas({
           onZoneCreateRef.current([true, xMin, yMin, xMax, yMax])
         }
       } else if (d.zoneId) {
-        const livePos = livePositions.current.get(d.zoneId)
-        if (livePos) {
-          onZoneUpdateRef.current(d.zoneId, livePos)
+        if (isZoneLocked(zonesRef.current, d.zoneId)) {
           livePositions.current.delete(d.zoneId)
+        } else {
+          const livePos = livePositions.current.get(d.zoneId)
+          if (livePos) {
+            onZoneUpdateRef.current(d.zoneId, livePos)
+            livePositions.current.delete(d.zoneId)
+          }
         }
       }
 
@@ -722,9 +772,13 @@ export function FanCanvas({
     const d = drag.current
     // Commit any in-flight move/resize so the zone doesn't snap back
     if (d.type && d.type !== 'create' && d.zoneId) {
-      const livePos = livePositions.current.get(d.zoneId)
-      if (livePos) {
-        onZoneUpdate(d.zoneId, livePos)
+      if (!isZoneLocked(zonesRef.current, d.zoneId)) {
+        const livePos = livePositions.current.get(d.zoneId)
+        if (livePos) {
+          onZoneUpdate(d.zoneId, livePos)
+          livePositions.current.delete(d.zoneId)
+        }
+      } else {
         livePositions.current.delete(d.zoneId)
       }
     }
@@ -735,6 +789,27 @@ export function FanCanvas({
     const canvas = canvasRef.current
     if (canvas) canvas.style.cursor = 'default'
   }, [onZoneUpdate])
+
+  const onContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onZoneContextMenu) return
+
+    e.preventDefault()
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const { px, py } = eventToCanvasPx(e.nativeEvent, canvas)
+    const { w, h } = sizeRef.current
+    const S = editorSectorGeometry(w, h)
+    const L = canvasToLogical(px, py, S)
+
+    const idx = hitTestZonesAtPoint(L.x, L.y, zonesRef.current, { includeLocked: true })
+    if (idx === -1) return
+
+    const zone = zonesRef.current[idx]
+    onZoneSelect(zone.id)
+    onZoneContextMenu(zone.id, e.clientX, e.clientY)
+  }, [onZoneContextMenu, onZoneSelect])
 
   // ---------------------------------------------------------------------------
   // Render
@@ -749,6 +824,7 @@ export function FanCanvas({
       <canvas
         ref={canvasRef}
         onMouseDown={onMouseDown}
+        onContextMenu={onContextMenu}
         onMouseLeave={onMouseLeave}
         style={{ display: 'block' }}
       />

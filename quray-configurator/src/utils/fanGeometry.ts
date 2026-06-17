@@ -60,12 +60,24 @@ export interface CanvasPoint {
 export function sectorForCanvas(canvas: { width: number; height: number }): SectorGeometry {
   const W = canvas.width
   const H = canvas.height
-  const halfAngle = (Math.PI * (96 / 2)) / 180          // 48° → radians
-  const vertSpan  = H * 0.88                             // usable radial span in px
-  const outerR    = (0.95 * W) / (2 * Math.sin(halfAngle))
-  const innerR    = Math.max(outerR * 0.15, outerR - vertSpan)
-  const cx        = W / 2
-  const cy        = H * 0.92 + innerR                    // centre is below canvas bottom
+  const halfAngle = (Math.PI * (96 / 2)) / 180
+
+  // Fit by width AND height so the fan never overflows.
+  const padW = 0.92
+  const padH = 0.92
+  const outerByWidth  = (padW * W) / (2 * Math.sin(halfAngle))
+  const outerByHeight = (padH * H) / (1 - 0.14 * Math.cos(halfAngle))
+  const outerR = Math.min(outerByWidth, outerByHeight)
+
+  const innerR = outerR * 0.14
+
+  const cx = W / 2
+  const fanTop    = outerR
+  const fanBottom = innerR * Math.cos(halfAngle)
+  const fanTotalH = fanTop - fanBottom
+  const topPad    = (H - fanTotalH) / 2
+  const cy        = topPad + fanTop
+
   return {
     cx,
     cy,

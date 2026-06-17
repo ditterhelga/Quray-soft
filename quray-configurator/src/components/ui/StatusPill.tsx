@@ -18,7 +18,6 @@ type StatusPillProps = {
   menu?: StatusPillMenu
 }
 
-const HOVER_MENU_CLOSE_DELAY_MS = 150
 const MENU_ROW_HOVER =
   'cursor-pointer transition-colors duration-[120ms] hover:bg-bg-hover'
 
@@ -80,42 +79,17 @@ function CalibratedMenu() {
 export function StatusPill({ label, status, menu }: StatusPillProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuId = useId()
-
-  function clearCloseTimer() {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current)
-      closeTimerRef.current = null
-    }
-  }
-
-  function scheduleClose() {
-    clearCloseTimer()
-    closeTimerRef.current = setTimeout(() => {
-      setOpen(false)
-    }, HOVER_MENU_CLOSE_DELAY_MS)
-  }
-
-  function handleMouseEnter() {
-    if (!menu) return
-    clearCloseTimer()
-    setOpen(true)
-  }
-
-  function handleMouseLeave() {
-    if (!menu) return
-    scheduleClose()
-  }
-
-  useEffect(() => {
-    return () => {
-      clearCloseTimer()
-    }
-  }, [])
 
   useEffect(() => {
     if (!open) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (containerRef.current?.contains(event.target as Node)) {
+        return
+      }
+      setOpen(false)
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -123,26 +97,27 @@ export function StatusPill({ label, status, menu }: StatusPillProps) {
       }
     }
 
+    document.addEventListener('mousedown', handlePointerDown)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
 
   return (
-    // Hover-open menus are desktop-only; touch devices cannot hover to open.
-    <div
-      ref={containerRef}
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         aria-expanded={menu ? open : undefined}
         aria-haspopup={menu ? 'menu' : undefined}
         aria-controls={menu && open ? menuId : undefined}
+        onClick={() => {
+          if (menu) {
+            setOpen((prev) => !prev)
+          }
+        }}
         className={`flex h-8 cursor-pointer items-center gap-3 rounded-lg border border-border px-5 text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover ${
           open ? 'bg-bg-hover' : 'bg-bg-base'
         }`}

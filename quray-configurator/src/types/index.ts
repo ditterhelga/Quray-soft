@@ -62,6 +62,10 @@ export type GesturePosition = [
   yMax: number,
 ]
 
+import type { ZoneMapping } from '@/components/editor/zoneMappings'
+
+export type { ZoneMapping } from '@/components/editor/zoneMappings'
+
 /** A single gesture zone shown on the Editor fan canvas. */
 export interface EditorZone {
   id: string
@@ -70,7 +74,12 @@ export interface EditorZone {
   color: string
   /** Output type; null = unmapped (rendered with hatching + amber warning). */
   type: 'Note' | 'CC' | 'CV' | null
+  /** When false, zone renders muted/grey on canvas but stays interactive. */
+  active: boolean
+  /** When true, zone cannot be selected or transformed on the canvas. */
+  locked: boolean
   position: GesturePosition
+  mappings: ZoneMapping[]
 }
 
 /** @deprecated Use Set */

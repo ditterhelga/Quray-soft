@@ -50,6 +50,10 @@ import { PresetRow } from '@/components/library/PresetRow'
 import { PresetDetailPanel } from '@/components/library/PresetDetailPanel'
 import { FanVisualization } from '@/components/library/FanVisualization'
 import { FanCanvas } from '@/components/editor/FanCanvas'
+import { ZoneMappingCard, createStyleguideMapping } from '@/components/editor/ZoneMappingCard'
+import { ZoneSettings } from '@/components/editor/ZoneSettings'
+import { applyMappingTypeChange } from '@/components/editor/zoneMappings'
+import { EditorZonesProvider, useEditorZones } from '@/context/EditorZonesContext'
 import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
 import { DeviceToolbar } from '@/components/device/DeviceToolbar'
 import { DeviceWorkingSetList } from '@/components/device/DeviceWorkingSetList'
@@ -87,6 +91,9 @@ import {
 } from '@/components/ui/FavouritesToggleButton'
 import { FilterButton, filterButtonClassName, filterButtonLabelClassName } from '@/components/ui/FilterButton'
 import { SearchField } from '@/components/ui/SearchField'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { StepperInput } from '@/components/ui/StepperInput'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { tabClassName, tabGroupClassName } from '@/components/ui/Tab'
 import {
   StatusChip,
@@ -131,6 +138,7 @@ const TOC = [
       { id: 'preset-setup-row', label: 'Preset Setup Row' },
       { id: 'account-row', label: 'Account Row' },
       { id: 'fan-canvas', label: 'Fan Canvas' },
+      { id: 'zone-mapping-card', label: 'Zone Mapping Card' },
       { id: 'zone-settings', label: 'Zone Settings' },
       { id: 'editor-layout', label: 'Editor Layout' },
       { id: 'fan-geometry', label: 'Fan Geometry' },
@@ -359,28 +367,65 @@ const STYLEGUIDE_EDITOR_ZONES: EditorZone[] = [
     name: 'Filter Sweep',
     color: '#5B8EE6',
     type: 'CC',
+    active: true,
+    locked: false,
     position: [true, 0.0, 0.2, 0.25, 0.9],
+    mappings: [{
+      id: 'sg-z1-m1',
+      type: 'CC',
+      channel: 1,
+      axis: 'Y',
+      cc: 74,
+      singleValue: false,
+      bottom: 0,
+      top: 127,
+    }],
   },
   {
     id: 'sg-z2',
     name: 'Root Note',
     color: '#7BB15B',
     type: 'Note',
+    active: true,
+    locked: false,
     position: [true, 0.25, 0.3, 0.55, 1.0],
+    mappings: [{
+      id: 'sg-z2-m1',
+      type: 'Note',
+      channel: 1,
+      axis: 'Y',
+      rootNote: 'C',
+      octave: 4,
+      split: { enabled: false, mode: 'Linear', xDivisions: 4, yDivisions: 1 },
+    }],
   },
   {
     id: 'sg-z3',
     name: 'Sub Octave',
     color: '#CC9F2C',
     type: 'Note',
+    active: true,
+    locked: false,
     position: [true, 0.55, 0.1, 0.8, 0.85],
+    mappings: [{
+      id: 'sg-z3-m1',
+      type: 'Note',
+      channel: 1,
+      axis: 'Y',
+      rootNote: 'C',
+      octave: 3,
+      split: { enabled: false, mode: 'Linear', xDivisions: 4, yDivisions: 1 },
+    }],
   },
   {
     id: 'sg-z4',
     name: 'Unmapped',
     color: '#8D95B2',
     type: null,
+    active: true,
+    locked: false,
     position: [true, 0.8, 0.2, 1.0, 0.7],
+    mappings: [],
   },
 ]
 
@@ -413,49 +458,124 @@ function StyleguideFanCanvasDemo({
   )
 }
 
-function StyleguideZoneSettingsPanel({
-  selectedZoneId,
-  zones,
-}: {
-  selectedZoneId: string | null
-  zones: EditorZone[]
-}) {
-  const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? null
-
-  if (!selectedZone) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-5 py-4 text-sm text-text-muted">
-        Select a zone to edit
-      </div>
-    )
-  }
+function StyleguideSegmentedControlDemo() {
+  const [axis, setAxis] = useState<'Y' | 'X' | 'Entry' | 'Exit'>('Y')
 
   return (
-    <div className="flex flex-col px-5 py-4">
-      <div className="flex items-center gap-2">
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: selectedZone.color }}
-          aria-hidden="true"
-        />
-        <h2 className="text-base text-text-primary">{selectedZone.name}</h2>
-      </div>
+    <SegmentedControl
+      value={axis}
+      options={[
+        { value: 'Y', label: 'Y' },
+        { value: 'X', label: 'X' },
+        { value: 'Entry', label: 'Entry' },
+        { value: 'Exit', label: 'Exit' },
+      ]}
+      onChange={setAxis}
+      ariaLabel="Axis preview"
+      className="max-w-sm"
+    />
+  )
+}
 
-      <section className="mt-6">
-        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Mapping</h3>
-        <p className="text-sm text-text-muted">Note / CC / CV configuration coming soon.</p>
-      </section>
+function StyleguideStepperInputDemo() {
+  const [octave, setOctave] = useState(4)
 
-      <section className="mt-6">
-        <h3 className="mb-2 text-xs uppercase tracking-wide text-text-muted">Axis</h3>
-        <p className="text-sm text-text-muted">Y / X / Entry / Exit coming soon.</p>
-      </section>
+  return <StepperInput value={octave} min={0} max={8} onChange={setOctave} />
+}
+
+function StyleguideZoneMappingCardDemo() {
+  const [mapping, setMapping] = useState(() =>
+    createStyleguideMapping({ id: 'sg-mapping-demo', type: 'CC', cc: 74, axis: 'Y' }),
+  )
+  const [isOpen, setIsOpen] = useState(true)
+
+  const [splitMapping, setSplitMapping] = useState(() =>
+    createStyleguideMapping({
+      id: 'sg-mapping-split',
+      type: 'Note',
+      rootNote: 'C',
+      octave: 4,
+      split: { enabled: true, mode: 'Linear', xDivisions: 4, yDivisions: 1 },
+    }),
+  )
+  const [splitOpen, setSplitOpen] = useState(true)
+
+  return (
+    <div className="max-w-sm space-y-3">
+      <ZoneMappingCard
+        mapping={mapping}
+        isOpen={isOpen}
+        onToggle={() => setIsOpen((value) => !value)}
+        onUpdate={(patch) => setMapping((current) => ({ ...current, ...patch }))}
+        onTypeChange={(type) =>
+          setMapping((current) => applyMappingTypeChange(current, type))
+        }
+        onDelete={() => setIsOpen(false)}
+      />
+      <ZoneMappingCard
+        mapping={splitMapping}
+        isOpen={splitOpen}
+        onToggle={() => setSplitOpen((v) => !v)}
+        onUpdate={(patch) => setSplitMapping((current) => ({ ...current, ...patch }))}
+        onTypeChange={(type) =>
+          setSplitMapping((current) => applyMappingTypeChange(current, type))
+        }
+        onDelete={() => setSplitOpen(false)}
+        presetScale="Natural Minor"
+        presetRoot="A"
+      />
     </div>
   )
 }
 
-function StyleguideEditorLayoutDemo() {
-  const [zones, setZones] = useState<EditorZone[]>(STYLEGUIDE_EDITOR_ZONES)
+function StyleguideZoneSettingsDemoInner({
+  selectedZoneId,
+  className = '',
+}: {
+  selectedZoneId: string | null
+  className?: string
+}) {
+  const { zones, setZones } = useEditorZones()
+
+  const onZonePatch = useCallback((
+    id: string,
+    patch: Partial<Pick<EditorZone, 'name' | 'color' | 'type' | 'active' | 'locked'>>,
+  ) => {
+    setZones((prev) => prev.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)))
+  }, [setZones])
+
+  return (
+    <div className={`flex min-h-0 flex-1 flex-col ${className}`.trim()}>
+      <ZoneSettings
+        selectedZoneId={selectedZoneId}
+        zones={zones}
+        onZonePatch={onZonePatch}
+      />
+    </div>
+  )
+}
+
+function StyleguideZoneSettingsDemo({
+  selectedZoneId,
+  initialZones,
+  className = '',
+}: {
+  selectedZoneId: string | null
+  initialZones: EditorZone[]
+  className?: string
+}) {
+  return (
+    <EditorZonesProvider initialZones={initialZones}>
+      <StyleguideZoneSettingsDemoInner
+        selectedZoneId={selectedZoneId}
+        className={className}
+      />
+    </EditorZonesProvider>
+  )
+}
+
+function StyleguideEditorLayoutDemoInner() {
+  const { zones, setZones } = useEditorZones()
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>('sg-z1')
   const [drawMode, setDrawMode] = useState(false)
 
@@ -470,16 +590,26 @@ function StyleguideEditorLayoutDemo() {
       name: `Zone ${zones.length + 1}`,
       color: '#5145F2',
       type: null,
+      active: true,
+      locked: false,
       position,
+      mappings: [],
     }
     setZones((prev) => [...prev, newZone])
     setSelectedZoneId(newZone.id)
     setDrawMode(false)
-  }, [zones.length])
+  }, [zones.length, setZones])
 
   const handleZoneUpdate = useCallback((id: string, position: GesturePosition) => {
     setZones((prev) => prev.map((zone) => (zone.id === id ? { ...zone, position } : zone)))
-  }, [])
+  }, [setZones])
+
+  const handleZonePatch = useCallback((
+    id: string,
+    patch: Partial<Pick<EditorZone, 'name' | 'color' | 'type' | 'active' | 'locked'>>,
+  ) => {
+    setZones((prev) => prev.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)))
+  }, [setZones])
 
   return (
     <div className="space-y-4">
@@ -513,10 +643,22 @@ function StyleguideEditorLayoutDemo() {
             background: 'var(--color-bg-sidebar)',
           }}
         >
-          <StyleguideZoneSettingsPanel selectedZoneId={selectedZoneId} zones={zones} />
+          <ZoneSettings
+            selectedZoneId={selectedZoneId}
+            zones={zones}
+            onZonePatch={handleZonePatch}
+          />
         </aside>
       </div>
     </div>
+  )
+}
+
+function StyleguideEditorLayoutDemo() {
+  return (
+    <EditorZonesProvider initialZones={STYLEGUIDE_EDITOR_ZONES}>
+      <StyleguideEditorLayoutDemoInner />
+    </EditorZonesProvider>
   )
 }
 
@@ -1066,6 +1208,39 @@ export function Styleguide() {
                 </div>
                 <p className="mt-4 text-sm font-light text-text-muted">
                   Fixed 180×48px · label 70% opacity at rest, full on hover · CaretDown unchanged
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Toggle switch
+                </p>
+                <div className="flex flex-wrap items-center gap-6">
+                  <ToggleSwitch checked={false} onChange={() => undefined} label="Off" />
+                  <ToggleSwitch checked onChange={() => undefined} label="On" />
+                </div>
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  36×20px track · accent fill when on · 16px thumb
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Segmented control
+                </p>
+                <StyleguideSegmentedControlDemo />
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  36px height · flex-1 segments · selected uses bg-active + border-active
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+                  Stepper input
+                </p>
+                <StyleguideStepperInputDemo />
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  36px height · rounded-xl card border · ± buttons with centred value
                 </p>
               </div>
 
@@ -2013,6 +2188,35 @@ export function Styleguide() {
             </div>
           </Section>
 
+          <Section id="zone-mapping-card" title="Zone Mapping Card">
+            <StyleguideZoneMappingCardDemo />
+            <div className="mt-6 space-y-3 text-sm font-light text-text-muted">
+              <p>
+                <code className="font-mono text-xs text-text-secondary">ZoneMappingCard</code> — accordion
+                card for a single zone mapping (
+                <code className="font-mono text-xs text-text-secondary">components/editor/ZoneMappingCard.tsx</code>
+                ). Collapsed header shows summary text, caret, and delete action · expanded body
+                renders type-specific fields · Note type exposes a Split zone toggle; when enabled
+                shows distribution mode (Linear / Jump 2 / Jump 3 / Random), Steps stepper (2–12),
+                and a live piano-roll preview strip of the resulting note names.
+              </p>
+              <p className="text-xs font-light uppercase tracking-wide text-text-primary">Props</p>
+              <ul className="list-inside list-disc space-y-1 font-mono text-xs text-text-secondary">
+                <li>mapping: ZoneMapping</li>
+                <li>isOpen: boolean</li>
+                <li>onToggle(): void</li>
+                <li>onUpdate(patch: Partial&lt;ZoneMapping&gt;): void</li>
+                <li>onTypeChange(type: ZoneMappingType): void</li>
+                <li>onDelete(): void</li>
+              </ul>
+              <p>
+                Card style: rounded-xl border border-border-active bg-bg-active · only one mapping
+                accordion open at a time per zone in{' '}
+                <code className="font-mono text-xs text-text-secondary">ZoneSettings</code>.
+              </p>
+            </div>
+          </Section>
+
           <Section id="zone-settings" title="Zone Settings">
             <div className="flex flex-wrap items-start gap-8">
               <div>
@@ -2020,10 +2224,13 @@ export function Styleguide() {
                   Empty state
                 </p>
                 <div
-                  className="w-80 overflow-hidden rounded-lg border border-border-panel"
+                  className="flex h-48 w-80 flex-col overflow-hidden rounded-lg border border-border-panel"
                   style={{ background: 'var(--color-bg-sidebar)' }}
                 >
-                  <StyleguideZoneSettingsPanel selectedZoneId={null} zones={STYLEGUIDE_EDITOR_ZONES} />
+                  <StyleguideZoneSettingsDemo
+                    selectedZoneId={null}
+                    initialZones={STYLEGUIDE_EDITOR_ZONES}
+                  />
                 </div>
               </div>
 
@@ -2032,32 +2239,35 @@ export function Styleguide() {
                   Zone selected
                 </p>
                 <div
-                  className="w-80 overflow-hidden rounded-lg border border-border-panel"
+                  className="flex h-[640px] w-80 flex-col overflow-hidden rounded-lg border border-border-panel"
                   style={{ background: 'var(--color-bg-sidebar)' }}
                 >
-                  <StyleguideZoneSettingsPanel selectedZoneId="sg-z1" zones={STYLEGUIDE_EDITOR_ZONES} />
+                  <StyleguideZoneSettingsDemo
+                    selectedZoneId="sg-z1"
+                    initialZones={STYLEGUIDE_EDITOR_ZONES}
+                  />
                 </div>
               </div>
             </div>
             <div className="mt-6 space-y-3 text-sm font-light text-text-muted">
               <p>
                 <code className="font-mono text-xs text-text-secondary">ZoneSettings</code> — right
-                panel in <code className="font-mono text-xs text-text-secondary">Editor.tsx</code>{' '}
-                (internal, not exported). 320px (
+                panel in the editor (
+                <code className="font-mono text-xs text-text-secondary">components/editor/ZoneSettings.tsx</code>
+                ). 320px (
                 <code className="font-mono text-xs text-text-secondary">w-80</code>) sidebar with
-                bg-sidebar and border-panel left edge.
+                bg-sidebar and border-panel left edge · scrolls when content overflows.
               </p>
               <p className="text-xs font-light uppercase tracking-wide text-text-primary">Props</p>
               <ul className="list-inside list-disc space-y-1 font-mono text-xs text-text-secondary">
                 <li>selectedZoneId: string | null</li>
                 <li>zones: EditorZone[]</li>
+                <li>onZonePatch(id, {'{'} name, color, type, active, locked {'}'})</li>
               </ul>
               <p>
-                Empty: centred muted “Select a zone to edit”. Selected: colour dot + zone name (
-                <code className="font-mono text-xs text-text-secondary">text-base text-text-primary</code>
-                ), then MAPPING and AXIS sections with uppercase muted labels (
-                <code className="font-mono text-xs text-text-secondary">text-xs uppercase tracking-wide text-text-muted mb-2</code>
-                ) and placeholder body copy.
+                Sections: header (editable name, color picker, Active/Lock toggles) · MAPPINGS
+                accordion list with add/delete (undo toast via editor context) · each mapping card
+                holds type, channel, and type-specific fields including axis where applicable.
               </p>
             </div>
           </Section>
