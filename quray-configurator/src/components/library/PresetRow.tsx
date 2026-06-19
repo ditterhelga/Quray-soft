@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   PRESET_TABLE_ACTIONS_CELL,
   PRESET_TABLE_GRID,
@@ -383,6 +384,8 @@ export function PresetRow({
   slotDragHandleListeners,
   panelOpen = false,
 }: PresetRowProps) {
+  const navigate = useNavigate()
+
   function handleRowClick() {
     if (isRenaming || readOnly) {
       return
@@ -415,7 +418,7 @@ export function PresetRow({
       return
     }
 
-    console.log('Open in editor', preset.id)
+    navigate(`/editor/${preset.id}`)
   }
 
   function handleRemoveFromSet(event: MouseEvent) {

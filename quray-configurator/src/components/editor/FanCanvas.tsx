@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react'
+import { useEditorZones } from '@/context/EditorZonesContext'
 import {
   canvasToLogical,
   clamp,
@@ -231,7 +232,7 @@ function drawSectorBackground(
   sectorRectPath(ctx, S, 0, 0, 1, 1)
   ctx.clip()
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)'
   ctx.lineWidth = 0.5
 
   // Angular spokes (vertical in logical space)
@@ -494,6 +495,7 @@ export function FanCanvas({
   onZoneUpdate,
   onZoneContextMenu,
 }: FanCanvasProps) {
+  const { presetScale, presetRoot, presetOctave } = useEditorZones()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
 
@@ -502,6 +504,9 @@ export function FanCanvas({
   const zonesRef       = useRef<EditorZone[]>(zones)
   const selectedIdRef  = useRef<string | null>(selectedZoneId)
   const drawModeRef    = useRef<boolean>(drawMode)
+  const presetScaleRef = useRef(presetScale)
+  const presetRootRef  = useRef(presetRoot)
+  const presetOctaveRef = useRef(presetOctave)
 
   const onZoneCreateRef = useRef(onZoneCreate)
   const onZoneUpdateRef = useRef(onZoneUpdate)
@@ -509,6 +514,9 @@ export function FanCanvas({
   useEffect(() => { zonesRef.current      = zones },          [zones])
   useEffect(() => { selectedIdRef.current = selectedZoneId }, [selectedZoneId])
   useEffect(() => { drawModeRef.current   = drawMode },       [drawMode])
+  useEffect(() => { presetScaleRef.current = presetScale }, [presetScale])
+  useEffect(() => { presetRootRef.current = presetRoot }, [presetRoot])
+  useEffect(() => { presetOctaveRef.current = presetOctave }, [presetOctave])
   useEffect(() => { onZoneCreateRef.current = onZoneCreate }, [onZoneCreate])
   useEffect(() => { onZoneUpdateRef.current = onZoneUpdate }, [onZoneUpdate])
 
@@ -567,9 +575,6 @@ export function FanCanvas({
 
   useEffect(() => {
     resizeCanvas()
-    console.log('container size:',
-      containerRef.current?.clientWidth,
-      containerRef.current?.clientHeight)
     const observer = new ResizeObserver(resizeCanvas)
     if (containerRef.current) observer.observe(containerRef.current)
     return () => observer.disconnect()
@@ -608,6 +613,15 @@ export function FanCanvas({
         livePositions.current,
         hatchPatternRef.current,
       )
+
+      const scaleLabel = `${presetScaleRef.current} · ${presetRootRef.current}${presetOctaveRef.current}`
+      ctx.save()
+      ctx.font = 'normal 14px "Space Grotesk", sans-serif'
+      ctx.fillStyle = 'rgba(164, 173, 226, 0.7)'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(scaleLabel, 24, 24)
+      ctx.restore()
 
       // Draw in-progress ghost if creating a zone
       const d = drag.current
@@ -812,28 +826,6 @@ export function FanCanvas({
     }
   }, [])
 
-  const onMouseLeave = useCallback(() => {
-    const d = drag.current
-    // Commit any in-flight move/resize so the zone doesn't snap back
-    if (d.type && d.type !== 'create' && d.zoneId) {
-      if (!isZoneLocked(zonesRef.current, d.zoneId)) {
-        const livePos = livePositions.current.get(d.zoneId)
-        if (livePos) {
-          onZoneUpdate(d.zoneId, livePos)
-          livePositions.current.delete(d.zoneId)
-        }
-      } else {
-        livePositions.current.delete(d.zoneId)
-      }
-    }
-    drag.current.type = null
-    drag.current.zoneId = null
-    drag.current.startPosition = null
-
-    const canvas = canvasRef.current
-    if (canvas) canvas.style.cursor = 'default'
-  }, [onZoneUpdate])
-
   const onContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onZoneContextMenu) return
 
@@ -869,14 +861,13 @@ export function FanCanvas({
         ref={canvasRef}
         onMouseDown={onMouseDown}
         onContextMenu={onContextMenu}
-        onMouseLeave={onMouseLeave}
         style={{ display: 'block' }}
       />
 
       {/* Draw-mode badge */}
       {drawMode && (
         <div
-          className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-xs font-medium pointer-events-none"
+          className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-xs font-normal pointer-events-none"
           style={{
             background: 'var(--color-accent)',
             color:      'var(--color-text-primary)',

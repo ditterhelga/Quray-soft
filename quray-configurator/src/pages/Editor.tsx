@@ -6,28 +6,18 @@ import {
   UploadSimple,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react'
+import { useParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { FanCanvas } from '@/components/editor/FanCanvas'
 import { ZoneSettings } from '@/components/editor/ZoneSettings'
+import { createDefaultMapping } from '@/components/editor/zoneMappings'
+import { Toast } from '@/components/ui/Toast'
+import { ZONE_PALETTE } from '@/constants/zonePalette'
+import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { libraryToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import type { EditorZone, GesturePosition } from '@/types'
-
-const ZONE_PALETTE = [
-  '#6C5BD9',
-  '#5E3B93',
-  '#913F7E',
-  '#A75465',
-  '#B45846',
-  '#B76D3A',
-  '#AC7F39',
-  '#647D46',
-  '#3E8577',
-  '#3E809C',
-  '#426AA8',
-  '#22319F',
-] as const
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -259,12 +249,17 @@ const MOCK_ZONES: EditorZone[] = [
 // ---------------------------------------------------------------------------
 
 export function Editor() {
+  const { presetId } = useParams<{ presetId: string }>()
+  const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
     zones,
     setZones,
     selectedZoneId,
     setSelectedZoneId,
     openZoneContextMenu,
+    toast,
+    dismissToast,
+    setToast,
   } = useEditorZones()
   const [drawMode, setDrawMode] = useState(false)
 
@@ -280,9 +275,9 @@ export function Editor() {
   }
 
   useEffect(() => {
-    setZones(MOCK_ZONES)
+    setZones(editorPreset?.zones ?? [])
     setSelectedZoneId(null)
-  }, [setZones, setSelectedZoneId])
+  }, [presetId, setZones, setSelectedZoneId])
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -300,15 +295,16 @@ export function Editor() {
   }, [setSelectedZoneId])
 
   const handleZoneCreate = useCallback((position: GesturePosition) => {
+    const defaultMapping = createDefaultMapping('Note')
     const newZone: EditorZone = {
       id:       `${zoneIdCounter}-${Date.now()}`,
       name:     `Zone ${zones.length + 1}`,
       color:    pickNextZoneColor(),
-      type:     null,
+      type:     'Note',
       active:   true,
       locked:   false,
       position,
-      mappings: [],
+      mappings: [defaultMapping],
     }
     setZones(prev => [...prev, newZone])
     setSelectedZoneId(newZone.id)
@@ -373,7 +369,14 @@ export function Editor() {
                 <button
                   type="button"
                   className={outlinedButtonClassName}
-                  onClick={() => console.log('Send to Quray')}
+                  onClick={() => {
+                    const hasAnyMappings = zones.some(z => z.mappings.length > 0)
+                    if (!hasAnyMappings) {
+                      setToast({ message: 'No mappings assigned. Add at least one mapping before syncing.' })
+                      return
+                    }
+                    console.log('Send to Quray')
+                  }}
                 >
                   <UploadSimple size={14} weight="regular" className="shrink-0" aria-hidden="true" />
                   Send to Quray
@@ -394,6 +397,15 @@ export function Editor() {
                 onZoneUpdate={handleZoneUpdate}
                 onZoneContextMenu={openZoneContextMenu}
               />
+              {toast && (
+                <Toast
+                  message={toast.message}
+                  actionLabel={toast.actionLabel}
+                  onAction={toast.onAction}
+                  onDismiss={dismissToast}
+                  positionClassName="absolute top-12 left-1/2 -translate-x-1/2"
+                />
+              )}
             </div>
           </div>
         </main>

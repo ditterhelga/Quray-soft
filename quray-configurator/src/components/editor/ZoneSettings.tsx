@@ -14,22 +14,8 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import { createMappingId } from '@/components/editor/zoneMappings'
+import { ZONE_PALETTE } from '@/constants/zonePalette'
 import type { EditorZone } from '@/types'
-
-const ZONE_PALETTE = [
-  '#564FBA',
-  '#5E3B93',
-  '#913F7E',
-  '#A75465',
-  '#B45846',
-  '#B76D3A',
-  '#AC7F39',
-  '#647D46',
-  '#3E8577',
-  '#3E809C',
-  '#426AA8',
-  '#4955A8',
-] as const
 
 function zonePanelDividerClassName() {
   return 'border-t border-border-panel'

@@ -17,15 +17,11 @@ import {
   type ZoneMapping,
   type ZoneMappingType,
 } from '@/components/editor/zoneMappings'
+import { findMidiDevice, findMidiParameter } from '@/components/editor/midiDevices'
+import { ZONE_PALETTE } from '@/constants/zonePalette'
 import type { EditorZone, GesturePosition } from '@/types'
 import { duplicateZoneRecord } from '@/utils/zoneActions'
 import { buildScaleNotes, distributeNotes } from '@/utils/scales'
-
-const ZONE_PALETTE = [
-  '#6C5BD9', '#5E3B93', '#913F7E', '#A75465', '#B45846',
-  '#B76D3A', '#AC7F39', '#647D46', '#3E8577', '#3E809C',
-  '#426AA8', '#22319F',
-] as const
 
 function shufflePalette(arr: string[]): string[] {
   const a = [...arr]
@@ -63,6 +59,7 @@ type EditorZonesContextValue = {
   openZoneContextMenu: (zoneId: string, x: number, y: number) => void
   closeZoneContextMenu: () => void
   toast: ToastState
+  setToast: Dispatch<SetStateAction<ToastState>>
   dismissToast: () => void
   /** Preset-level scale name, e.g. 'Chromatic', 'Natural Minor'. */
   presetScale: string
@@ -70,7 +67,12 @@ type EditorZonesContextValue = {
   /** Preset-level root note, e.g. 'C', 'A'. */
   presetRoot: string
   setPresetRoot: Dispatch<SetStateAction<string>>
+  presetOctave: number
+  setPresetOctave: Dispatch<SetStateAction<number>>
   applySplit: (zoneId: string, mappingId: string) => void
+  myDevices: string[]
+  addMyDevice: (deviceId: string) => void
+  removeMyDevice: (deviceId: string) => void
 }
 
 const EditorZonesContext = createContext<EditorZonesContextValue | null>(null)
@@ -87,6 +89,37 @@ function patchZoneMappings(
   }
 }
 
+function deriveZoneName(zone: EditorZone, mapping: ZoneMapping): string | null {
+  // Only auto-rename if name matches default pattern "Zone N"
+  if (!/^Zone \d+$/.test(zone.name)) return null
+
+  switch (mapping.type) {
+    case 'Note': {
+      const note = `${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
+      if (mapping.chordMode === 'chord') return `${note} ${mapping.chordType ?? 'Major'}`
+      return note
+    }
+    case 'CC': {
+      if (mapping.ccInputMode === 'device' && mapping.ccParamId) {
+        const param = findMidiParameter(mapping.ccDeviceId, mapping.ccParamId)
+        if (param) return param.name
+      }
+      return `CC ${mapping.cc ?? 0}`
+    }
+    case 'CV': {
+      const port = `CV${mapping.port ?? 1}`
+      const mode = mapping.cvMode ?? 'Pitch'
+      const short: Record<string, string> = {
+        Pitch: 'Pitch', Continuous: 'Cont', Gate: 'Gate', Trigger: 'Trig'
+      }
+      return `${port} ${short[mode] ?? mode}`
+    }
+    case 'CV note': {
+      return `CV${mapping.port ?? 1} ${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
+    }
+  }
+}
+
 export function EditorZonesProvider({
   children,
   initialZones = [],
@@ -100,6 +133,8 @@ export function EditorZonesProvider({
   const [toast, setToast] = useState<ToastState>(null)
   const [presetScale, setPresetScale] = useState('Chromatic')
   const [presetRoot, setPresetRoot] = useState('C')
+  const [presetOctave, setPresetOctave] = useState(4)
+  const [myDevices, setMyDevices] = useState<string[]>([])
   const colorPoolRef = useRef<string[]>(shufflePalette([...ZONE_PALETTE]))
 
   function pickNextZoneColor(): string {
@@ -113,6 +148,14 @@ export function EditorZonesProvider({
     setToast(null)
   }, [])
 
+  const addMyDevice = useCallback((deviceId: string) => {
+    setMyDevices((prev) => prev.includes(deviceId) ? prev : [...prev, deviceId])
+  }, [])
+
+  const removeMyDevice = useCallback((deviceId: string) => {
+    setMyDevices((prev) => prev.filter((id) => id !== deviceId))
+  }, [])
+
   const updateMapping = useCallback((
     zoneId: string,
     mappingId: string,
@@ -120,15 +163,20 @@ export function EditorZonesProvider({
   ) => {
     setZones((prev) =>
       prev.map((zone) => {
-        if (zone.id !== zoneId) {
-          return zone
-        }
+        if (zone.id !== zoneId) return zone
 
-        return patchZoneMappings(zone, (mappings) =>
-          mappings.map((mapping) =>
-            mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
-          ),
+        const updatedMappings = zone.mappings.map((mapping) =>
+          mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
         )
+        const primaryMapping = updatedMappings[0]
+        const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+
+        return {
+          ...zone,
+          mappings: updatedMappings,
+          type: deriveZoneTypeFromMappings(updatedMappings),
+          ...(autoName ? { name: autoName } : {}),
+        }
       }),
     )
   }, [])
@@ -140,15 +188,20 @@ export function EditorZonesProvider({
   ) => {
     setZones((prev) =>
       prev.map((zone) => {
-        if (zone.id !== zoneId) {
-          return zone
-        }
+        if (zone.id !== zoneId) return zone
 
-        return patchZoneMappings(zone, (mappings) =>
-          mappings.map((mapping) =>
-            mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
-          ),
+        const updatedMappings = zone.mappings.map((mapping) =>
+          mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
         )
+        const primaryMapping = updatedMappings[0]
+        const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+
+        return {
+          ...zone,
+          mappings: updatedMappings,
+          type: deriveZoneTypeFromMappings(updatedMappings),
+          ...(autoName ? { name: autoName } : {}),
+        }
       }),
     )
   }, [])
@@ -294,9 +347,9 @@ export function EditorZonesProvider({
 
       const noteCount = xDiv * yDiv
       const pool = buildScaleNotes(
-        'Chromatic',
-        mapping.rootNote ?? 'C',
-        mapping.octave ?? 4,
+        presetScale,
+        presetRoot,
+        mapping.octave ?? presetOctave,
         noteCount * 3,
       )
       const notes = distributeNotes(pool, split.mode, noteCount)
@@ -339,9 +392,13 @@ export function EditorZonesProvider({
         }
       }
 
-      return prev.flatMap((z) => (z.id === zoneId ? newZones : [z]))
+      const result = prev.flatMap((z) => (z.id === zoneId ? newZones : [z]))
+      if (newZones.length > 0) {
+        setTimeout(() => setSelectedZoneId(newZones[0].id), 0)
+      }
+      return result
     })
-  }, [])
+  }, [presetScale, presetRoot, presetOctave])
 
   return (
     <EditorZonesContext.Provider
@@ -360,12 +417,18 @@ export function EditorZonesProvider({
         openZoneContextMenu,
         closeZoneContextMenu,
         toast,
+        setToast,
         dismissToast,
         presetScale,
         setPresetScale,
         presetRoot,
         setPresetRoot,
+        presetOctave,
+        setPresetOctave,
         applySplit,
+        myDevices,
+        addMyDevice,
+        removeMyDevice,
       }}
     >
       {children}

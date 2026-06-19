@@ -6,11 +6,13 @@ type ToastProps = {
   durationMs?: number
   actionLabel?: string
   onAction?: () => void
+  positionClassName?: string
 }
 
-export function toastClassName(hasAction = false) {
-  return `fixed bottom-8 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-lg border border-border bg-bg-active px-4 py-3 text-sm font-light text-text-primary shadow-lg ${
-    hasAction ? 'pointer-events-auto flex items-center gap-4' : 'pointer-events-none'
+export function toastClassName(hasAction = false, positionClassName?: string) {
+  const position = positionClassName ?? 'fixed bottom-8 left-1/2 -translate-x-1/2'
+  return `${position} z-50 max-w-md rounded-lg border border-border bg-bg-active px-4 py-3 text-center text-sm font-light text-text-primary shadow-lg ${
+    hasAction ? 'pointer-events-auto flex items-center justify-center gap-4' : 'pointer-events-none'
   }`
 }
 
@@ -24,6 +26,7 @@ export function Toast({
   durationMs = 4000,
   actionLabel,
   onAction,
+  positionClassName,
 }: ToastProps) {
   const hasAction = Boolean(actionLabel && onAction)
 
@@ -38,7 +41,7 @@ export function Toast({
   }
 
   return (
-    <div role="status" aria-live="polite" className={toastClassName(hasAction)}>
+    <div role="status" aria-live="polite" className={toastClassName(hasAction, positionClassName)}>
       <span className="min-w-0">{message}</span>
       {hasAction && (
         <button type="button" onClick={handleAction} className={toastActionClassName()}>

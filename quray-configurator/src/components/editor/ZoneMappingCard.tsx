@@ -1,7 +1,9 @@
-import { CaretRight, Trash } from '@phosphor-icons/react'
+import { CaretRight, Check, MagnifyingGlass, PencilSimple, Trash } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MIDI_DEVICES, findMidiDevice, findMidiParameter } from '@/components/editor/midiDevices'
 import {
+  CHORD_TYPES,
   createDefaultMapping,
   CV_MODE_OPTIONS,
   MAPPING_TYPE_OPTIONS,
@@ -11,6 +13,7 @@ import {
   type ZoneMappingType,
 } from '@/components/editor/zoneMappings'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
+import { useEditorZones } from '@/context/EditorZonesContext'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { StepperInput } from '@/components/ui/StepperInput'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
@@ -125,13 +128,7 @@ function IntegerTextInput({
       pattern="[0-9]*"
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      onFocus={(event) => {
-        const target = event.target
-        setTimeout(() => {
-          const len = target.value.length
-          target.setSelectionRange(len, len)
-        }, 0)
-      }}
+      onFocus={(e) => { e.target.select() }}
       onBlur={() => commit(draft)}
       onKeyDown={handleKeyDown}
       className={className}
@@ -225,6 +222,331 @@ export interface ZoneMappingCardProps {
   onApplySplit?: () => void
 }
 
+const CHORD_INTERVALS: Record<string, number[]> = {
+  Major: [0, 4, 7],
+  Minor: [0, 3, 7],
+  Sus2: [0, 2, 7],
+  Sus4: [0, 5, 7],
+  Power: [0, 7],
+  Oct: [0, 12],
+}
+
+function getChordNotes(rootNote: string, octave: number, chordType: string): string[] {
+  const intervals = CHORD_INTERVALS[chordType] ?? [0]
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+  const rootIndex = noteNames.indexOf(rootNote)
+  if (rootIndex === -1) return [rootNote + octave]
+  return intervals.map((interval) => {
+    const noteIndex = (rootIndex + interval) % 12
+    const octaveOffset = Math.floor((rootIndex + interval) / 12)
+    return `${noteNames[noteIndex]}${octave + octaveOffset}`
+  })
+}
+
+function CCDevicePopover({
+  selectedDeviceId,
+  myDevices,
+  anchorRef,
+  onSelect,
+  onAddDevice,
+  onRemoveDevice,
+  onClose,
+}: {
+  selectedDeviceId?: string
+  myDevices: string[]
+  anchorRef: React.RefObject<HTMLDivElement | null>
+  onSelect: (deviceId: string) => void
+  onAddDevice: (deviceId: string) => void
+  onRemoveDevice: (deviceId: string) => void
+  onClose: () => void
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [search, setSearch] = useState('')
+  const [editMode, setEditMode] = useState(false)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+    const rect = anchor.getBoundingClientRect()
+    const POPOVER_HEIGHT = 380
+    setPosition({
+      top: Math.min(rect.top, window.innerHeight - POPOVER_HEIGHT - 16),
+      left: Math.max(8, rect.left - 264 - 8),
+    })
+  }, [anchorRef])
+
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent) {
+      if (popoverRef.current?.contains(e.target as Node)) return
+      if (anchorRef.current?.contains(e.target as Node)) return
+      onClose()
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [anchorRef, onClose])
+
+  const myDeviceObjects = myDevices
+    .map((id) => MIDI_DEVICES.find((d) => d.id === id))
+    .filter(Boolean) as import('@/components/editor/midiDevices').MidiDevice[]
+
+  const searchResults = search.length > 0
+    ? MIDI_DEVICES.filter(
+        (d) =>
+          d.name.toLowerCase().includes(search.toLowerCase()) &&
+          !myDevices.includes(d.id)
+      )
+    : []
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 50, width: 264 }}
+      className="rounded-xl border border-border-subtle bg-bg-elevated shadow-lg animate-[dropdown-enter_150ms_ease-out_both] overflow-hidden"
+    >
+      {/* Search */}
+      <div className="flex items-center gap-2 border-b border-border-subtle px-6 py-3">
+        <MagnifyingGlass size={14} className="shrink-0 text-text-muted" />
+        <input
+          autoFocus
+          type="text"
+          placeholder="Search to add devices..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setEditMode(false) }}
+          className="min-w-0 flex-1 bg-transparent text-sm font-light text-text-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
+
+      <div style={{ maxHeight: 320, overflowY: 'auto' }} className="pb-3">
+        {/* My devices section */}
+        {myDeviceObjects.length > 0 && search === '' && (
+          <div className="pb-2">
+            <div className="flex items-center justify-between px-6 pt-5 pb-3">
+              <p className="text-xs uppercase tracking-wide text-text-muted">My devices</p>
+              <button
+                type="button"
+                onClick={() => setEditMode(v => !v)}
+                className="flex h-5 w-5 cursor-pointer items-center justify-center text-text-muted transition-colors duration-[120ms] hover:text-text-primary"
+              >
+                {editMode
+                  ? <span className="text-xs font-light">Done</span>
+                  : <PencilSimple size={16} weight="regular" />
+                }
+              </button>
+            </div>
+            <ul className="flex flex-col gap-0.5">
+              {myDeviceObjects.map((device) => {
+                const isSelected = device.id === selectedDeviceId
+                return (
+                  <li key={device.id}>
+                    <div
+                      className={`flex min-h-9 items-start justify-between gap-2 rounded-lg mx-3 px-3 py-2 transition-colors duration-[120ms] ${
+                        !editMode ? 'cursor-pointer hover:bg-bg-row-hover' : ''
+                      } ${isSelected && !editMode ? 'bg-bg-active' : ''}`}
+                      onClick={() => { if (!editMode) { onSelect(device.id); onClose() } }}
+                    >
+                      <span className={`flex-1 min-w-0 text-sm font-light leading-snug ${isSelected && !editMode ? 'text-text-primary' : 'text-text-muted'}`}>
+                        {device.name}
+                      </span>
+                      <div className="flex h-5 w-5 shrink-0 items-start justify-center pt-0.5">
+                        {!editMode && isSelected && (
+                          <Check size={14} weight="bold" className="text-text-primary" />
+                        )}
+                        {editMode && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onRemoveDevice(device.id) }}
+                            className="flex cursor-pointer items-center justify-center text-text-muted transition-colors duration-[120ms] hover:text-status-error"
+                          >
+                            <Trash size={14} weight="regular" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {myDeviceObjects.length === 0 && search === '' && (
+          <p className="px-6 py-4 text-sm font-light text-text-muted">
+            Search to find and add devices from the database.
+          </p>
+        )}
+
+        {/* Search results */}
+        {search.length > 0 && (
+          <>
+            <p className="px-6 pt-5 pb-3 text-xs uppercase tracking-wide text-text-muted">Add to my devices</p>
+            {searchResults.length === 0 ? (
+              <p className="px-6 py-3 text-sm font-light text-text-muted">No devices found</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {searchResults.map((device) => (
+                  <li
+                    key={device.id}
+                    className="flex items-start justify-between gap-3 rounded-lg px-6 py-2"
+                  >
+                    <span className="text-sm font-light text-text-muted leading-snug">{device.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { onAddDevice(device.id); setSearch('') }}
+                      className="mt-0.5 flex h-6 shrink-0 cursor-pointer items-center rounded-md border border-border-subtle px-2 text-xs font-light text-text-muted transition-colors duration-[120ms] hover:border-accent hover:text-accent"
+                    >
+                      + Add
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+function CCParameterPopover({
+  device,
+  selectedParamId,
+  anchorRef,
+  onSelect,
+  onClose,
+}: {
+  device: import('@/components/editor/midiDevices').MidiDevice
+  selectedParamId?: string
+  anchorRef: React.RefObject<HTMLDivElement | null>
+  onSelect: (paramId: string, cc: number) => void
+  onClose: () => void
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>(device.categories[0] ?? '')
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+    const rect = anchor.getBoundingClientRect()
+    const POPOVER_WIDTH = 420
+    const POPOVER_HEIGHT = 320
+    setPosition({
+      top: Math.min(rect.top, window.innerHeight - POPOVER_HEIGHT - 16),
+      left: Math.max(8, rect.left - POPOVER_WIDTH - 8),
+    })
+  }, [anchorRef])
+
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent) {
+      if (popoverRef.current?.contains(e.target as Node)) return
+      if (anchorRef.current?.contains(e.target as Node)) return
+      onClose()
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [anchorRef, onClose])
+
+  const filteredParams = device.parameters.filter((p) => {
+    const matchesSearch = search === '' || p.name.toLowerCase().includes(search.toLowerCase())
+    const matchesCategory = search !== '' || p.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 50, width: 420 }}
+      className="rounded-xl border border-border-subtle bg-bg-elevated shadow-lg animate-[dropdown-enter_150ms_ease-out_both] overflow-hidden"
+    >
+      {/* Search */}
+      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+        <MagnifyingGlass size={14} className="shrink-0 text-text-muted" />
+        <input
+          autoFocus
+          type="text"
+          placeholder="Search parameters..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-sm font-light text-text-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
+
+      <div className="flex" style={{ height: 280 }}>
+        {/* Categories — only show when not searching */}
+        {search === '' && (
+          <div
+            className="flex w-[160px] shrink-0 flex-col border-r border-border-subtle py-2 overflow-y-auto"
+            style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 32px), transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 32px), transparent 100%)' }}
+          >
+            {device.categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2.5 text-left text-sm font-light transition-colors duration-[120ms] ${
+                  selectedCategory === cat
+                    ? 'bg-bg-active text-text-primary'
+                    : 'text-text-muted hover:bg-bg-active hover:text-text-primary'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Parameters */}
+        <div
+          className="flex flex-1 flex-col py-2 overflow-y-auto"
+          style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 32px), transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 32px), transparent 100%)' }}
+        >
+          {filteredParams.length === 0 ? (
+            <p className="px-4 py-5 text-sm font-light text-text-muted">No parameters found</p>
+          ) : (
+            filteredParams.map((param) => {
+              const isSelected = param.id === selectedParamId
+              return (
+                <button
+                  key={param.id}
+                  type="button"
+                  onClick={() => { onSelect(param.id, param.cc); onClose() }}
+                  className={`flex items-center justify-between px-4 py-2.5 text-left transition-colors duration-[120ms] ${
+                    isSelected
+                      ? 'bg-bg-active text-text-primary'
+                      : 'text-text-muted hover:bg-bg-active hover:text-text-primary'
+                  }`}
+                >
+                  <span className="text-sm font-light">{param.name}</span>
+                  <span className="text-xs font-light text-text-muted shrink-0 ml-2">CC {param.cc}</span>
+                </button>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 export function ZoneMappingCard({
   mapping,
   isOpen,
@@ -236,6 +558,13 @@ export function ZoneMappingCard({
   presetRoot = 'C',
   onApplySplit,
 }: ZoneMappingCardProps) {
+  const { myDevices, addMyDevice, removeMyDevice } = useEditorZones()
+  const [devicePopoverOpen, setDevicePopoverOpen] = useState(false)
+  const deviceAnchorRef = useRef<HTMLDivElement>(null)
+  const [paramPopoverOpen, setParamPopoverOpen] = useState(false)
+  const paramAnchorRef = useRef<HTMLDivElement>(null)
+  const [savedDevice, setSavedDevice] = useState<{ ccDeviceId?: string; ccParamId?: string; cc?: number }>({})
+
   const split = mapping.split ?? {
     enabled: false,
     mode: 'Linear' as const,
@@ -329,9 +658,7 @@ export function ZoneMappingCard({
                   className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
                 >
                   {CHANNEL_OPTIONS.map((channel) => (
-                    <option key={channel} value={channel}>
-                      {channel}
-                    </option>
+                    <option key={channel} value={channel}>{channel}</option>
                   ))}
                 </select>
               </div>
@@ -366,6 +693,65 @@ export function ZoneMappingCard({
                   ))}
                 </select>
               </div>
+
+              <div className={mappingDividerClassName} />
+
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Mode</span>
+                <div className="flex items-center gap-2">
+                  {(['Single', 'Chord'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => onUpdate({ chordMode: mode === 'Single' ? 'single' : 'chord' })}
+                      className={`${mappingTabButtonClassName(
+                        (mapping.chordMode ?? 'single') === (mode === 'Single' ? 'single' : 'chord'),
+                      )} !w-auto px-[10px]`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(mapping.chordMode ?? 'single') === 'chord' && (
+                <div className={cvRowClassName}>
+                  <span className={zoneFieldLabelClassName()}>Chord</span>
+                  <select
+                    value={mapping.chordType ?? 'Major'}
+                    onChange={(event) =>
+                      onUpdate({ chordType: event.target.value as typeof CHORD_TYPES[number] })
+                    }
+                    className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                  >
+                    {CHORD_TYPES.map((chord) => (
+                      <option key={chord} value={chord}>
+                        {chord}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(mapping.chordMode ?? 'single') === 'chord' && (
+                <div
+                  className="flex flex-wrap justify-end gap-1 rounded-xl border border-border-subtle bg-bg-active px-3 py-2.5"
+                  aria-label="Chord notes preview"
+                >
+                  {getChordNotes(
+                    mapping.rootNote ?? 'C',
+                    mapping.octave ?? 4,
+                    mapping.chordType ?? 'Major',
+                  ).map((note, index) => (
+                    <span
+                      key={`${note}-${index}`}
+                      className="rounded bg-bg-hover px-2 py-1 text-xs font-light text-text-secondary"
+                    >
+                      {note}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className={mappingDividerClassName} />
 
@@ -435,7 +821,7 @@ export function ZoneMappingCard({
                   </div>
 
                   <div
-                    className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-bg-active px-3 py-2.5"
+                    className="flex flex-wrap justify-end gap-1 rounded-xl border border-border-subtle bg-bg-active px-3 py-2.5"
                     aria-label="Note distribution preview"
                   >
                     {splitNotes.map((note, index) => (
@@ -498,57 +884,61 @@ export function ZoneMappingCard({
 
               {(mapping.ccInputMode ?? 'device') === 'device' && (
                 <>
-                  <div className={cvRowClassName}>
+                  <div
+                    ref={deviceAnchorRef}
+                    className={`${zoneFieldCardClassName()} cursor-pointer transition-colors duration-[120ms] hover:bg-bg-hover`}
+                    onClick={() => { setDevicePopoverOpen(v => !v); setParamPopoverOpen(false) }}
+                  >
                     <span className={zoneFieldLabelClassName()}>Device</span>
-                    <select
-                      value={mapping.ccDeviceId ?? ''}
-                      onChange={(event) => {
-                        const deviceId = event.target.value
-                        if (deviceId === '__add__') return
-                        onUpdate({
-                          ccDeviceId: deviceId || undefined,
-                          ccParamId: undefined,
-                          cc: undefined,
-                        })
-                      }}
-                      className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-                    >
-                      <option value="">Select device</option>
-                      {MIDI_DEVICES.map((device) => (
-                        <option key={device.id} value={device.id}>
-                          {device.name}
-                        </option>
-                      ))}
-                      <option disabled>──────────</option>
-                      <option value="__add__">Add device...</option>
-                    </select>
+                    <span className="text-sm font-light text-text-primary">
+                      {mapping.ccDeviceId
+                        ? findMidiDevice(mapping.ccDeviceId)?.name ?? 'Select device'
+                        : 'Select device'
+                      }
+                    </span>
                   </div>
+                  {devicePopoverOpen && (
+                    <CCDevicePopover
+                      selectedDeviceId={mapping.ccDeviceId}
+                      myDevices={myDevices}
+                      anchorRef={deviceAnchorRef}
+                      onSelect={(deviceId) => onUpdate({ ccDeviceId: deviceId, ccParamId: undefined, cc: undefined })}
+                      onAddDevice={addMyDevice}
+                      onRemoveDevice={removeMyDevice}
+                      onClose={() => setDevicePopoverOpen(false)}
+                    />
+                  )}
                   {mapping.ccDeviceId && (
-                    <div className={cvRowClassName}>
-                      <span className={zoneFieldLabelClassName()}>Parameter</span>
-                      <select
-                        value={mapping.ccParamId ?? ''}
-                        onChange={(event) => {
-                          const paramId = event.target.value || undefined
-                          const param = findMidiParameter(mapping.ccDeviceId, paramId)
-                          onUpdate({ ccParamId: paramId, cc: param?.cc })
-                        }}
-                        className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
+                    <>
+                      <div
+                        ref={paramAnchorRef}
+                        className={`${zoneFieldCardClassName()} cursor-pointer transition-colors duration-[120ms] hover:bg-bg-hover`}
+                        onClick={() => { setParamPopoverOpen(v => !v); setDevicePopoverOpen(false) }}
                       >
-                        <option value="">Select parameter</option>
-                        {findMidiDevice(mapping.ccDeviceId)?.parameters.map((param) => (
-                          <option key={param.id} value={param.id}>
-                            {param.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                        <span className={zoneFieldLabelClassName()}>Parameter</span>
+                        <span className={`text-sm font-light ${mapping.ccParamId ? 'text-text-primary' : 'text-text-muted'}`}>
+                          {mapping.ccParamId
+                            ? findMidiDevice(mapping.ccDeviceId)?.parameters.find((p) => p.id === mapping.ccParamId)?.name ?? 'Select parameter'
+                            : 'Select parameter'
+                          }
+                        </span>
+                      </div>
+                      {paramPopoverOpen && (
+                        <CCParameterPopover
+                          device={findMidiDevice(mapping.ccDeviceId)!}
+                          selectedParamId={mapping.ccParamId}
+                          anchorRef={paramAnchorRef}
+                          onSelect={(paramId, cc) => onUpdate({ ccParamId: paramId, cc })}
+                          onClose={() => setParamPopoverOpen(false)}
+                        />
+                      )}
+                    </>
                   )}
                   {mapping.ccParamId && (
                     <div className={cvRowClassName}>
                       <span className={zoneFieldLabelClassName()}>CC</span>
                       <span className="text-sm font-light text-text-muted">
-                        {mapping.cc ?? '—'} · auto
+                        {mapping.cc ?? '—'}
                       </span>
                     </div>
                   )}
@@ -571,32 +961,41 @@ export function ZoneMappingCard({
               <div className={mappingCheckboxRowClassName}>
                 <button
                   type="button"
-                  onClick={() =>
-                    onUpdate({
-                      ccInputMode:
-                        (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
-                      ccDeviceId: undefined,
-                      ccParamId: undefined,
-                      cc: undefined,
-                    })
-                  }
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  <span className="text-sm font-light text-text-muted">Manual input</span>
-                  <SelectionCheckbox
-                    checked={(mapping.ccInputMode ?? 'device') === 'manual'}
-                    compact
-                    ariaLabel="Manual input"
-                    onToggle={() =>
+                  onClick={() => {
+                    const isCurrentlyManual = (mapping.ccInputMode ?? 'device') === 'manual'
+                    if (isCurrentlyManual) {
                       onUpdate({
-                        ccInputMode:
-                          (mapping.ccInputMode ?? 'device') === 'manual' ? 'device' : 'manual',
+                        ccInputMode: 'device',
+                        ccDeviceId: savedDevice.ccDeviceId,
+                        ccParamId: savedDevice.ccParamId,
+                        cc: savedDevice.cc,
+                      })
+                    } else {
+                      setSavedDevice({
+                        ccDeviceId: mapping.ccDeviceId,
+                        ccParamId: mapping.ccParamId,
+                        cc: mapping.cc,
+                      })
+                      onUpdate({
+                        ccInputMode: 'manual',
                         ccDeviceId: undefined,
                         ccParamId: undefined,
                         cc: undefined,
                       })
                     }
-                  />
+                  }}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span className="text-sm font-light text-text-muted">Manual input</span>
+                  <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-[120ms] ${
+                    (mapping.ccInputMode ?? 'device') === 'manual'
+                      ? 'border-accent bg-accent'
+                      : 'border-border-checkbox bg-transparent'
+                  }`} aria-hidden="true">
+                    {(mapping.ccInputMode ?? 'device') === 'manual' && (
+                      <Check size={10} weight="bold" className="text-text-primary" />
+                    )}
+                  </span>
                 </button>
               </div>
 
@@ -674,20 +1073,6 @@ export function ZoneMappingCard({
           {mapping.type === 'CV' && (
             <div className={mappingSectionClassName}>
               <div className={cvRowClassName}>
-                <span className={zoneFieldLabelClassName()}>Channel</span>
-                <select
-                  value={String(mapping.channel)}
-                  onChange={(event) => onUpdate({ channel: Number(event.target.value) })}
-                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-                >
-                  {CHANNEL_OPTIONS.map((channel) => (
-                    <option key={channel} value={channel}>
-                      {channel}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={cvRowClassName}>
                 <span className={zoneFieldLabelClassName()}>Port</span>
                 <div className="flex items-center gap-2">
                   {([1, 2, 3, 4] as const).map((port) => (
@@ -697,7 +1082,22 @@ export function ZoneMappingCard({
                       onClick={() => onUpdate({ port })}
                       className={mappingTabButtonClassName((mapping.port ?? 1) === port)}
                     >
-                      CV{port}
+                      {String(port).padStart(2, '0')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className={cvRowClassName}>
+                <span className={zoneFieldLabelClassName()}>Axis</span>
+                <div className="flex items-center gap-2">
+                  {(['Y', 'X'] as const).map((axis) => (
+                    <button
+                      key={axis}
+                      type="button"
+                      onClick={() => onUpdate({ axis })}
+                      className={mappingTabButtonClassName(mapping.axis === axis)}
+                    >
+                      {axis}
                     </button>
                   ))}
                 </div>
@@ -737,21 +1137,6 @@ export function ZoneMappingCard({
                   </select>
                 </div>
               )}
-              <div className={cvRowClassName}>
-                <span className={zoneFieldLabelClassName()}>Axis</span>
-                <div className="flex items-center gap-2">
-                  {(['Y', 'X'] as const).map((axis) => (
-                    <button
-                      key={axis}
-                      type="button"
-                      onClick={() => onUpdate({ axis })}
-                      className={mappingTabButtonClassName(mapping.axis === axis)}
-                    >
-                      {axis}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div className={mappingDividerClassName} />
               <div className={cvRowClassName}>
                 <span className={zoneFieldLabelClassName()}>
@@ -759,8 +1144,8 @@ export function ZoneMappingCard({
                 </span>
                 <StepperInput
                   value={mapping.bottom ?? -5}
-                  min={-5}
-                  max={5}
+                  min={-10}
+                  max={10}
                   step={0.1}
                   onChange={(v) => onUpdate({ bottom: Math.round(v * 10) / 10 })}
                   formatValue={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} V`}
@@ -771,8 +1156,8 @@ export function ZoneMappingCard({
                   <span className={zoneFieldLabelClassName()}>Top</span>
                   <StepperInput
                     value={mapping.top ?? 5}
-                    min={-5}
-                    max={5}
+                    min={-10}
+                    max={10}
                     step={0.1}
                     onChange={(v) => onUpdate({ top: Math.round(v * 10) / 10 })}
                     formatValue={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} V`}
@@ -810,24 +1195,21 @@ export function ZoneMappingCard({
           {mapping.type === 'CV note' && (
             <div className={mappingSectionClassName}>
               <div className={cvRowClassName}>
-                <span className={zoneFieldLabelClassName()}>Channel</span>
-                <select
-                  value={String(mapping.channel)}
-                  onChange={(e) => onUpdate({ channel: Number(e.target.value) })}
-                  className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-                >
-                  {CHANNEL_OPTIONS.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
-                </select>
-              </div>
-              <div className={cvRowClassName}>
                 <span className={zoneFieldLabelClassName()}>Port</span>
                 <div className="flex items-center gap-2">
                   {([1, 2, 3, 4] as const).map((port) => (
                     <button key={port} type="button"
-                      onClick={() => onUpdate({ port })}
+                      onClick={() => {
+                        const newPort = port
+                        const currentGate = mapping.gateChannel ?? 2
+                        const newGate = currentGate === newPort
+                          ? ([1, 2, 3, 4].find(ch => ch !== newPort) ?? 1)
+                          : currentGate
+                        onUpdate({ port: newPort, gateChannel: newGate })
+                      }}
                       className={mappingTabButtonClassName((mapping.port ?? 1) === port)}
                     >
-                      CV{port}
+                      {String(port).padStart(2, '0')}
                     </button>
                   ))}
                 </div>
@@ -871,7 +1253,7 @@ export function ZoneMappingCard({
                         onClick={() => !isUsedByPort && onUpdate({ gateChannel: ch })}
                         className={`${mappingTabButtonClassName((mapping.gateChannel ?? 2) === ch)} ${isUsedByPort ? 'opacity-30 cursor-not-allowed' : ''}`}
                       >
-                        CV{ch}
+                        {String(ch).padStart(2, '0')}
                       </button>
                     )
                   })}

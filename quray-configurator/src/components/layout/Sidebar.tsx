@@ -15,6 +15,8 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import { zoneFieldCardClassName } from '@/components/editor/ZoneMappingCard'
+import { ZONE_PALETTE } from '@/constants/zonePalette'
+import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import type { EditorZone } from '@/types'
 import { useEffect, useRef, useState } from 'react'
@@ -31,13 +33,6 @@ function editorZoneStatusSubLabel(zone: EditorZone): string | null {
 }
 import { AccountRow } from '@/components/layout/AccountRow'
 import { NavItem } from '@/components/layout/NavItem'
-
-const MOCK_PRESET = {
-  id: 'preset-1',
-  name: 'Bassline Filter Sweep',
-  colorA: '#1200e3',
-  colorB: '#cd00ff',
-}
 
 const mockSyncStatus = 'not-synced' as 'synced' | 'not-synced'
 const mockAutosaveStatus = 'saved' as 'saving' | 'saved' | 'error'
@@ -211,13 +206,13 @@ function PresetColorPopover({
           className="flex-1 flex items-center justify-start pl-4"
           onClick={() => setActiveTab('A')}
         >
-          <span className="pointer-events-none text-xs font-medium text-text-primary">A</span>
+          <span className="pointer-events-none text-xs font-normal text-text-primary">A</span>
         </div>
         <div
           className="flex-1 flex items-center justify-end pr-4"
           onClick={() => setActiveTab('B')}
         >
-          <span className="pointer-events-none text-xs font-medium text-text-primary">B</span>
+          <span className="pointer-events-none text-xs font-normal text-text-primary">B</span>
         </div>
       </div>
 
@@ -331,7 +326,7 @@ function PresetScalePopover({
   return (
     <div
       ref={popoverRef}
-      className="w-[240px] animate-[dropdown-enter_150ms_ease-out_both] rounded-xl border border-border-subtle bg-bg-elevated p-4 shadow-lg"
+      className="w-[240px] animate-[dropdown-enter_150ms_ease-out_both] rounded-xl border border-border-subtle bg-bg-elevated shadow-lg py-4"
       style={{
         position: 'fixed',
         top: position.top,
@@ -339,7 +334,7 @@ function PresetScalePopover({
         zIndex: 50,
       }}
     >
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-0.5 px-2">
         {SCALES_LIST.map((scaleName) => {
           const isSelected = scale === scaleName
 
@@ -350,13 +345,17 @@ function PresetScalePopover({
                 onClick={() => onScaleChange(scaleName)}
                 className={
                   isSelected
-                    ? 'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-sm font-light text-text-primary bg-bg-active'
-                    : 'flex w-full items-center rounded-lg px-3 py-1.5 text-sm font-light text-text-muted hover:bg-bg-active hover:text-text-primary transition-colors duration-[120ms]'
+                    ? 'flex h-9 w-full items-center justify-between rounded-lg px-4 text-sm font-light text-text-primary bg-bg-active'
+                    : 'flex h-9 w-full items-center justify-between rounded-lg px-4 text-sm font-light text-text-muted hover:bg-bg-row-hover hover:text-text-primary transition-colors duration-[120ms]'
                 }
               >
-                <span className="-ml-2">{scaleName}</span>
-                {isSelected && (
-                  <Check size={14} weight="bold" className="ml-auto -mr-2 shrink-0 text-text-primary" />
+                {scaleName}
+                {isSelected ? (
+                  <span className="ml-auto flex w-[14px] shrink-0 items-center justify-center">
+                    <Check size={14} weight="bold" className="text-text-primary" />
+                  </span>
+                ) : (
+                  <span className="ml-auto w-[14px] shrink-0" aria-hidden="true" />
                 )}
               </button>
             </li>
@@ -364,9 +363,9 @@ function PresetScalePopover({
         })}
       </ul>
 
-      <div className="my-3 border-t border-border-subtle" />
+      <div className="my-3 mx-6 border-t border-border-subtle" />
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 px-6">
         <label
           className={zoneFieldCardClassName()}
           onClick={() => rootSelectRef.current?.click()}
@@ -510,7 +509,7 @@ function PresetLayoutPopover({
 
   function handleSelect(layoutId: string) {
     if (layoutId === currentLayoutId) { onClose(); return }
-    if (hasZones && layoutId !== 'freehand') {
+    if (hasZones) {
       setPendingLayoutId(layoutId)
     } else {
       onApply(layoutId)
@@ -606,16 +605,25 @@ export function Sidebar({
   onOpenDeviceSettings,
 }: SidebarProps) {
   const location = useLocation()
-  const isEditor = location.pathname === '/editor'
+  const presetIdMatch = location.pathname.match(/^\/editor\/(.+)$/)
+  const presetId = presetIdMatch?.[1]
+  const editorPreset = presetId ? findEditorPreset(presetId) : undefined
+  const MOCK_PRESET = {
+    id: 'preset-1',
+    name: editorPreset?.name ?? 'New Preset',
+    colorA: '#1200e3',
+    colorB: '#cd00ff',
+  }
+  const isEditor = location.pathname.startsWith('/editor/')
+  const isFreshMode = location.pathname === '/'
   const navigate = useNavigate()
-  const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot } = useEditorZones()
+  const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave } = useEditorZones()
   const [presetName, setPresetName] = useState(MOCK_PRESET.name)
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false)
   const [currentLayoutId, setCurrentLayoutId] = useState('freehand')
-  const [presetOctave, setPresetOctave] = useState(4)
   const [colorA, setColorA] = useState(MOCK_PRESET.colorA)
   const [colorB, setColorB] = useState(MOCK_PRESET.colorB)
   const colorButtonRef = useRef<HTMLButtonElement>(null)
@@ -626,11 +634,10 @@ export function Sidebar({
     const layout = LAYOUTS.find(l => l.id === layoutId)
     if (!layout) return
     setCurrentLayoutId(layoutId)
-    const PALETTE = ['#6C5BD9','#5E3B93','#913F7E','#A75465','#B45846','#B76D3A','#AC7F39','#647D46']
     const newZones: EditorZone[] = layout.zones.map((z, i) => ({
       id: `layout-${layoutId}-${i}-${Date.now()}`,
       name: `Zone ${i + 1}`,
-      color: PALETTE[i % PALETTE.length],
+      color: ZONE_PALETTE[i % ZONE_PALETTE.length],
       type: null,
       active: true,
       locked: false,
@@ -941,28 +948,33 @@ export function Sidebar({
                 </h2>
 
                 <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-                  <div className="flex flex-col gap-6 pb-4">
-                    {RECENT_PRESETS.map((group) => (
-                      <div key={group.label}>
-                        <h3 className="pl-6 text-sm font-light text-text-muted">
-                          {group.label}
-                        </h3>
-                        <ul className="mt-4 flex w-full flex-col gap-3 px-3">
-                          {group.presets.map((name) => (
-                            <li key={name} className="w-full">
-                              <button
-                                type="button"
-                                className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
-                                title={name}
-                              >
-                                {name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+                  {!isFreshMode && (
+                    <div className="flex flex-col gap-6 pb-4">
+                      {RECENT_PRESETS.map((group) => (
+                        <div key={group.label}>
+                          <h3 className="pl-6 text-sm font-light text-text-muted">
+                            {group.label}
+                          </h3>
+                          <ul className="mt-4 flex w-full flex-col gap-3 px-3">
+                            {group.presets.map((name) => (
+                              <li key={name} className="w-full">
+                                <button
+                                  type="button"
+                                  className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
+                                  title={name}
+                                >
+                                  {name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {isFreshMode && (
+                    <p className="px-6 py-3 text-sm font-light text-text-muted">No recent presets yet.</p>
+                  )}
                 </div>
               </section>
             </div>

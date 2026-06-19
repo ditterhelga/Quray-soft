@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   PresetListStickyHeader,
   PresetListBody,
@@ -18,6 +19,7 @@ import { Toast } from '@/components/ui/Toast'
 import { AddPresetPickerModal } from '@/components/library/AddPresetPickerModal'
 import { SetPickerModal } from '@/components/library/SetPickerModal'
 import { EXPLORE_PRESETS } from '@/data/explorePresets'
+import { FACTORY_PRESETS } from '@/data/factoryPresets'
 import { PRESETS } from '@/data/presets'
 import { SETS } from '@/data/sets'
 import { filterSets, duplicateSetNameToastMessage } from '@/utils/filterSets'
@@ -61,10 +63,15 @@ type SetPickerState =
   | { mode: 'move-to-set'; presetId: string; sourceSetId: string }
   | null
 
-export function Library() {
+type LibraryProps = {
+  mode?: 'fresh' | 'full'
+}
+
+export function Library({ mode = 'full' }: LibraryProps) {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<LibraryTab>('library')
-  const [presets, setPresets] = useState(() => [...PRESETS])
-  const [sets, setSets] = useState(() => [...SETS])
+  const [presets, setPresets] = useState(() => mode === 'fresh' ? [...FACTORY_PRESETS] : [...PRESETS])
+  const [sets, setSets] = useState(() => mode === 'fresh' ? [] : [...SETS])
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS)
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
   const [openFilterAnchor, setOpenFilterAnchor] = useState<FilterAnchor | null>(
@@ -345,11 +352,8 @@ export function Library() {
     setSelectedPresetId((current) => (current === presetId ? null : presetId))
   }
 
-  function handleOpenPresetInEditor(presetId: string) {
-    const preset = presets.find((entry) => entry.id === presetId)
-    setToast({
-      message: preset ? `Opening ${preset.name} in editor…` : 'Opening preset in editor…',
-    })
+  function handleOpenInEditor(presetId: string) {
+    navigate(`/editor/${presetId}`)
   }
 
   function handleSendPresetToQuray(presetId: string) {
@@ -582,7 +586,7 @@ export function Library() {
     }
 
     if (actionId === 'open') {
-      handlePresetRowClick(presetId)
+      handleOpenInEditor(presetId)
     }
   }
 
@@ -759,6 +763,11 @@ export function Library() {
   function handlePresetAction(actionId: string, presetId: string) {
     if (actionId === 'add-to-library') {
       handleAddToLibrary(presetId)
+      return
+    }
+
+    if (actionId === 'open') {
+      handleOpenInEditor(presetId)
       return
     }
 
@@ -947,7 +956,7 @@ export function Library() {
           onlyFavourites={onlyFavourites}
           onOnlyFavouritesChange={setOnlyFavourites}
           onClearAllFilters={handleClearAllFilters}
-          onNewPreset={() => undefined}
+          onNewPreset={() => navigate('/editor/preset-empty')}
           stickyHeader={listHeader}
           detailPanel={
             selectedPreset ? (
@@ -962,7 +971,7 @@ export function Library() {
                 isFavourite={favourites[selectedPreset.id] ?? selectedPreset.isFavourite}
                 onToggleFavourite={() => toggleFavourite(selectedPreset.id)}
                 onClose={() => setSelectedPresetId(null)}
-                onOpenInEditor={() => handleOpenPresetInEditor(selectedPreset.id)}
+                onOpenInEditor={() => handleOpenInEditor(selectedPreset.id)}
                 onAddToLibrary={() => handleAddToLibrary(selectedPreset.id)}
                 onSendToQuray={() => handleSendPresetToQuray(selectedPreset.id)}
                 onNavigateToSet={handleNavigateToSet}

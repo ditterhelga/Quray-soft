@@ -1,4 +1,3 @@
-import { Toast } from '@/components/ui/Toast'
 import { ZoneContextMenu, useZoneContextMenuId } from '@/components/editor/ZoneContextMenu'
 import { useEditorZones } from '@/context/EditorZonesContext'
 
@@ -10,8 +9,6 @@ export function EditorZoneOverlays() {
     closeZoneContextMenu,
     duplicateZone,
     deleteZone,
-    toast,
-    dismissToast,
   } = useEditorZones()
   const menuId = useZoneContextMenuId()
 
@@ -58,15 +55,6 @@ export function EditorZoneOverlays() {
         }}
         onClose={closeZoneContextMenu}
       />
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          actionLabel={toast.actionLabel}
-          onAction={toast.onAction}
-          onDismiss={dismissToast}
-        />
-      )}
     </>
   )
 }

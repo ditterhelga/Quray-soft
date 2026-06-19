@@ -7,6 +7,9 @@ export type ZoneAxis = 'Y' | 'X' | 'Entry' | 'Exit'
 export type SplitMode = 'Linear' | 'Jump 2' | 'Jump 3' | 'Random'
 export type CvMode = 'Pitch' | 'Continuous' | 'Gate' | 'Trigger'
 
+export const CHORD_TYPES = ['Major', 'Minor', 'Sus2', 'Sus4', 'Power', 'Oct'] as const
+export type ChordType = typeof CHORD_TYPES[number]
+
 export type ZoneMapping = {
   id: string
   type: ZoneMappingType
@@ -14,6 +17,8 @@ export type ZoneMapping = {
   axis: ZoneAxis
   rootNote?: string
   octave?: number
+  chordMode?: 'single' | 'chord'
+  chordType?: 'Major' | 'Minor' | 'Sus2' | 'Sus4' | 'Power' | 'Oct'
   split?: {
     enabled: boolean
     mode: SplitMode
@@ -60,6 +65,8 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
         ...base,
         rootNote: 'C',
         octave: 4,
+        chordMode: 'single',
+        chordType: 'Major',
         split: { enabled: false, mode: 'Linear', steps: 6, xDivisions: 2, yDivisions: 2 },
       }
     case 'CC':
@@ -74,20 +81,22 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
     case 'CV':
       return {
         ...base,
+        axis: 'Y',
         port: 1,
         cvMode: 'Pitch',
         vOct: 'eurorack' as const,
         singleValue: false,
-        bottom: -5,
-        top: 5,
+        bottom: -10,
+        top: 10,
       }
     case 'CV note':
       return {
         ...base,
+        axis: 'Y',
         rootNote: 'C',
         octave: 4,
         port: 1,
-        gateChannel: 1,
+        gateChannel: 2,
       }
   }
 }
@@ -106,13 +115,13 @@ export function applyMappingTypeChange(
       ...mapping,
       type: nextType,
       channel: mapping.channel,
-      axis: mapping.axis,
+      axis: mapping.axis ?? 'Y',
       port: mapping.port,
       cvMode: mapping.cvMode,
       vOct: mapping.vOct,
       singleValue: false,
-      bottom: -5,
-      top: 5,
+      bottom: -10,
+      top: 10,
     })
   }
 
@@ -161,6 +170,9 @@ export function axisSummaryLabel(axis: ZoneAxis): string {
 export function mappingSummary(mapping: ZoneMapping): string {
   switch (mapping.type) {
     case 'Note':
+      if (mapping.chordMode === 'chord') {
+        return `${mapping.chordType ?? 'Major'} · ${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
+      }
       return `Note · ${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
     case 'CC': {
       if (mapping.ccInputMode === 'device') {
