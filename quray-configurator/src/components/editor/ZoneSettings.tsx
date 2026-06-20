@@ -69,6 +69,26 @@ const EditableZoneName = forwardRef<EditableZoneNameHandle, {
     setDraft(name)
   }, [name])
 
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const editingRef = useRef(editing)
+  editingRef.current = editing
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const nameRef = useRef(name)
+  nameRef.current = name
+
+  useEffect(() => {
+    return () => {
+      if (editingRef.current) {
+        const trimmed = draftRef.current.trim()
+        if (trimmed && trimmed !== nameRef.current) {
+          onSaveRef.current(trimmed)
+        }
+      }
+    }
+  }, [])
+
   function commit() {
     const trimmed = draft.trim()
     if (trimmed) {

@@ -70,6 +70,10 @@ type EditorZonesContextValue = {
   setPresetRoot: Dispatch<SetStateAction<string>>
   presetOctave: number
   setPresetOctave: Dispatch<SetStateAction<number>>
+  presetName: string
+  setPresetName: Dispatch<SetStateAction<string>>
+  renamePresetTrigger: number
+  triggerPresetRename: () => void
   applySplit: (zoneId: string, mappingId: string) => void
   myDevices: string[]
   addMyDevice: (deviceId: string) => void
@@ -148,6 +152,11 @@ export function EditorZonesProvider({
   const [presetRoot, setPresetRoot] = useState('C')
   const [presetOctave, setPresetOctave] = useState(4)
   const [myDevices, setMyDevices] = useState<string[]>([])
+  const [presetName, setPresetName] = useState('New Preset')
+  const [renamePresetTrigger, setRenamePresetTrigger] = useState(0)
+  const triggerPresetRename = useCallback(() => {
+    setRenamePresetTrigger((prev) => prev + 1)
+  }, [])
   const colorPoolRef = useRef<string[]>(shufflePalette([...ZONE_PALETTE]))
 
   const { push: historyPush, undo, redo, clear: historyClear, replaceLast, canUndo, canRedo } = useUndoHistory(100)
@@ -496,6 +505,10 @@ export function EditorZonesProvider({
         setPresetRoot,
         presetOctave,
         setPresetOctave,
+        presetName,
+        setPresetName,
+        renamePresetTrigger,
+        triggerPresetRename,
         applySplit,
         myDevices,
         addMyDevice,

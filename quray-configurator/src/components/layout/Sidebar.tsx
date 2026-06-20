@@ -619,8 +619,7 @@ export function Sidebar({
   const isEditor = location.pathname.startsWith('/editor/')
   const isFreshMode = location.pathname === '/' || searchParams.get('fresh') === '1'
   const navigate = useNavigate()
-  const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave } = useEditorZones()
-  const [presetName, setPresetName] = useState(MOCK_PRESET.name)
+  const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave, presetName, setPresetName, renamePresetTrigger } = useEditorZones()
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
@@ -628,6 +627,11 @@ export function Sidebar({
   const [currentLayoutId, setCurrentLayoutId] = useState('freehand')
   const [colorA, setColorA] = useState(MOCK_PRESET.colorA)
   const [colorB, setColorB] = useState(MOCK_PRESET.colorB)
+
+  useEffect(() => {
+    if (renamePresetTrigger > 0) setEditingName(true)
+  }, [renamePresetTrigger])
+
   const colorButtonRef = useRef<HTMLButtonElement>(null)
   const scaleButtonRef = useRef<HTMLButtonElement>(null)
   const layoutButtonRef = useRef<HTMLButtonElement>(null)
