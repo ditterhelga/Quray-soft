@@ -35,6 +35,7 @@ export type UseUndoHistory = {
   redo: () => void
   /** Drop all history (e.g. when switching presets). */
   clear: () => void
+  replaceLast: (command: HistoryCommand) => void
   canUndo: boolean
   canRedo: boolean
 }
@@ -96,5 +97,10 @@ export function useUndoHistory(maxSize: number = DEFAULT_MAX_SIZE): UseUndoHisto
     syncFlags()
   }, [syncFlags])
 
-  return { push, undo, redo, clear, canUndo, canRedo }
+  const replaceLast = useCallback((command: HistoryCommand) => {
+    if (pastRef.current.length === 0) return
+    pastRef.current[pastRef.current.length - 1] = command
+  }, [])
+
+  return { push, undo, redo, clear, replaceLast, canUndo, canRedo }
 }

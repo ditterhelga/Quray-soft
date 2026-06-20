@@ -98,7 +98,7 @@ export function AccountMenu({ onOpenDeviceSettings }: AccountMenuProps) {
         <div
           id={menuId}
           role="menu"
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[220px] animate-[dropdown-enter-up_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[var(--width-dropdown)] animate-[dropdown-enter-up_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
         >
           <AccountMenuItem
             icon={User}

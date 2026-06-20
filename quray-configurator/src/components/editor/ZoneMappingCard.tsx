@@ -115,6 +115,11 @@ function IntegerTextInput({
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      commit(draft)
+      return
+    }
+    if (event.ctrlKey || event.metaKey) return
     const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
     if (!allowed.includes(event.key) && !/^\d$/.test(event.key)) {
       event.preventDefault()

@@ -129,7 +129,7 @@ function EditorPresetKebabMenu({
             id={menuId}
             role="menu"
             style={menuStyle}
-            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
+            className="min-w-[var(--width-dropdown)] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
           >
             <button
               type="button"

@@ -134,7 +134,7 @@ export function StatusPill({ label, status, menu }: StatusPillProps) {
           <div
             id={menuId}
             role="menu"
-            className="min-w-[220px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
+            className="min-w-[var(--width-dropdown)] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
           >
             {menu === 'connected' ? <ConnectedMenu /> : <CalibratedMenu />}
           </div>

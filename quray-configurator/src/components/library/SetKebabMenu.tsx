@@ -42,7 +42,7 @@ const SET_KEBAB_MENU_ITEMS: SetKebabMenuItem[] = [
 const SET_KEBAB_MENU_WIDTH_PX = 220
 
 export function setKebabMenuPanelSurfaceClassName() {
-  return 'min-w-[220px] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg'
+  return 'min-w-[var(--width-dropdown)] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg'
 }
 
 function SetKebabMenuItemButton({

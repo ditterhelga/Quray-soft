@@ -61,7 +61,7 @@ export type PresetKebabMenuVariant = 'library' | 'explore' | 'nested-set'
 const PRESET_KEBAB_MENU_WIDTH_PX = 220
 
 export function presetKebabMenuPanelSurfaceClassName() {
-  return 'min-w-[220px] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg'
+  return 'min-w-[var(--width-dropdown)] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg'
 }
 
 export function presetKebabMenuPanelAnchoredClassName(placement: MenuPlacement = 'down') {

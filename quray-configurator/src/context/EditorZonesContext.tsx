@@ -150,7 +150,7 @@ export function EditorZonesProvider({
   const [myDevices, setMyDevices] = useState<string[]>([])
   const colorPoolRef = useRef<string[]>(shufflePalette([...ZONE_PALETTE]))
 
-  const { push: historyPush, undo, redo, clear: historyClear, canUndo, canRedo } = useUndoHistory(100)
+  const { push: historyPush, undo, redo, clear: historyClear, replaceLast, canUndo, canRedo } = useUndoHistory(100)
 
   // Synchronous mirrors of the latest zones/selection. These are updated
   // inside applyZones (NOT via useEffect) so that two commits fired in the same
@@ -158,6 +158,12 @@ export function EditorZonesProvider({
   // values; kept current by every path that mutates zones/selection.
   const zonesRef = useRef<EditorZone[]>(initialZones)
   const selectedZoneIdRef = useRef<string | null>(null)
+  const lastMappingEditRef = useRef<{
+    zoneId: string
+    mappingId: string
+    before: EditorZone[]
+    timestamp: number
+  } | null>(null)
   zonesRef.current = zones
   selectedZoneIdRef.current = selectedZoneId
 
@@ -236,13 +242,11 @@ export function EditorZonesProvider({
     const before = zonesRef.current
     const after = before.map((zone) => {
       if (zone.id !== zoneId) return zone
-
       const updatedMappings = zone.mappings.map((mapping) =>
         mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
       )
       const primaryMapping = updatedMappings[0]
       const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
-
       return {
         ...zone,
         mappings: updatedMappings,
@@ -250,8 +254,28 @@ export function EditorZonesProvider({
         ...(autoName ? { name: autoName } : {}),
       }
     })
-    commitZones(before, after, 'Edit mapping')
-  }, [commitZones])
+
+    const now = Date.now()
+    const last = lastMappingEditRef.current
+    const isSameSession =
+      last !== null &&
+      last.zoneId === zoneId &&
+      last.mappingId === mappingId &&
+      now - last.timestamp < 400
+
+    if (isSameSession) {
+      applyZones(after)
+      replaceLast({
+        undo: () => applyZones(last.before),
+        redo: () => applyZones(after),
+        description: 'Edit mapping',
+      })
+      lastMappingEditRef.current = { ...last, timestamp: now }
+    } else {
+      commitZones(before, after, 'Edit mapping')
+      lastMappingEditRef.current = { zoneId, mappingId, before, timestamp: now }
+    }
+  }, [applyZones, commitZones, replaceLast])
 
   const setMappingType = useCallback((
     zoneId: string,

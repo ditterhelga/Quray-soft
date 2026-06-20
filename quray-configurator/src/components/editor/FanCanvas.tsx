@@ -413,7 +413,7 @@ function drawZones(
       const centreP = logicalToCanvas(midLx, midLy, S)
       ctx.beginPath()
       ctx.arc(centreP.x, centreP.y, 7, 0, Math.PI * 2)
-      ctx.fillStyle = '#CC9F2C'   // --color-status-progress
+      ctx.fillStyle = getCssVar('--color-status-progress') || '#CC9F2C'
       ctx.fill()
       // Exclamation mark
       ctx.fillStyle = '#000'
@@ -445,12 +445,15 @@ function drawCreatePreview(
 
   // Ghost fill
   sectorRectPath(ctx, S, xMin, yMin, xMax, yMax)
-  ctx.fillStyle = 'rgba(81, 69, 242, 0.25)'   // --color-accent at 25%
+  const accent = getCssVar('--color-accent') || '#5145F2'
+  ctx.fillStyle = accent
+  ctx.globalAlpha = 0.25
   ctx.fill()
+  ctx.globalAlpha = 1.0
 
   // Dashed outline
   sectorRectPath(ctx, S, xMin, yMin, xMax, yMax)
-  ctx.strokeStyle = '#5145F2'
+  ctx.strokeStyle = accent
   ctx.lineWidth   = 1.5
   ctx.setLineDash([5, 4])
   ctx.stroke()
