@@ -11,9 +11,9 @@ export function tooltipWrapperClassName() {
   return 'relative inline-flex'
 }
 
-export function tooltipBubbleClassName() {
-  return 'rounded-lg bg-bg-hover px-3 py-1.5 text-sm font-light font-[300] text-text-muted shadow-lg max-w-[160px] text-center [font-weight:300]'
-}
+  export function tooltipBubbleClassName() {
+    return 'rounded-lg bg-bg-hover px-3 py-1.5 text-sm font-light font-[300] text-text-muted shadow-lg whitespace-nowrap [font-weight:300]'
+  }
 
 export function tooltipPlacementClassName() {
   return 'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 flex-col items-center'

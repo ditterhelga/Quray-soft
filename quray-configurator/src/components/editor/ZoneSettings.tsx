@@ -7,8 +7,10 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { ZoneMappingCard } from '@/components/editor/ZoneMappingCard'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { useEditorZones } from '@/context/EditorZonesContext'
@@ -116,6 +118,8 @@ function ZoneColorPicker({
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
   const menuId = useId()
 
   useEffect(() => {
@@ -124,6 +128,7 @@ function ZoneColorPicker({
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node
       if (containerRef.current?.contains(target)) return
+      if (menuRef.current?.contains(target)) return
       setOpen(false)
     }
 
@@ -137,6 +142,28 @@ function ZoneColorPicker({
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function updatePosition() {
+      const anchor = containerRef.current
+      if (!anchor) return
+      const rect = anchor.getBoundingClientRect()
+      setMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: Math.max(8, rect.right - 120),
+        zIndex: 50,
+      })
+    }
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
     }
   }, [open])
 
@@ -164,12 +191,14 @@ function ZoneColorPicker({
         <CaretDown size={12} weight="regular" className="shrink-0 text-text-muted" aria-hidden="true" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={menuRef}
           id={menuId}
           role="listbox"
           aria-label="Zone color"
-          className="absolute right-0 top-full z-50 mt-1.5 w-[120px] rounded-xl border border-border-subtle bg-bg-elevated p-3 shadow-lg animate-[dropdown-enter_150ms_ease-out_both]"
+          style={menuStyle}
+          className="w-[120px] rounded-xl border border-border-subtle bg-bg-elevated p-3 shadow-lg animate-[dropdown-enter_150ms_ease-out_both]"
         >
           <div className="grid grid-cols-3 gap-2">
             {ZONE_PALETTE.map((swatch) => {
@@ -194,7 +223,8 @@ function ZoneColorPicker({
           <p className="mt-2 text-[10px] text-text-muted text-center">
             Zone color · Canvas display only
           </p>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -211,6 +241,8 @@ function ZoneKebabMenu({
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
   const menuId = useId()
 
   useEffect(() => {
@@ -218,6 +250,7 @@ function ZoneKebabMenu({
 
     function handlePointerDown(event: MouseEvent) {
       if (containerRef.current?.contains(event.target as Node)) return
+      if (menuRef.current?.contains(event.target as Node)) return
       setOpen(false)
     }
 
@@ -230,6 +263,28 @@ function ZoneKebabMenu({
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function updatePosition() {
+      const anchor = containerRef.current
+      if (!anchor) return
+      const rect = anchor.getBoundingClientRect()
+      setMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: Math.max(8, rect.right - 180),
+        zIndex: 50,
+      })
+    }
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
     }
   }, [open])
 
@@ -257,11 +312,13 @@ function ZoneKebabMenu({
         <KebabIcon className="block shrink-0" aria-hidden="true" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={menuRef}
           id={menuId}
           role="menu"
-          className="absolute top-full right-0 z-50 mt-2 min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
+          style={menuStyle}
+          className="min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
         >
           <button
             type="button"
@@ -288,7 +345,8 @@ function ZoneKebabMenu({
           >
             Delete zone
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
