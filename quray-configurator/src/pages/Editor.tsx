@@ -253,19 +253,29 @@ export function Editor() {
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
     zones,
-    setZones,
+    commitZones,
+    resetZones,
     selectedZoneId,
     setSelectedZoneId,
     openZoneContextMenu,
     toast,
     dismissToast,
     setToast,
+    presetScale,
+    presetRoot,
+    presetOctave,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useEditorZones()
   const [drawMode, setDrawMode] = useState(false)
 
   const zoneIdCounter = useId()
   const canvasContainerRef = useRef<HTMLDivElement>(null)
   const colorPoolRef = useRef<string[]>(shuffle([...ZONE_PALETTE]))
+
+  const effectiveDrawMode = drawMode || zones.length === 0
 
   function pickNextZoneColor(): string {
     if (colorPoolRef.current.length === 0) {
@@ -275,9 +285,11 @@ export function Editor() {
   }
 
   useEffect(() => {
-    setZones(editorPreset?.zones ?? [])
+    // Loading a preset replaces zones without history and clears the undo stack
+    // so undo can never cross presets.
+    resetZones(editorPreset?.zones ?? [])
     setSelectedZoneId(null)
-  }, [presetId, setZones, setSelectedZoneId])
+  }, [presetId, resetZones, setSelectedZoneId])
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -306,25 +318,34 @@ export function Editor() {
       position,
       mappings: [defaultMapping],
     }
-    setZones(prev => [...prev, newZone])
+    commitZones(zones, [...zones, newZone], 'Create zone')
     setSelectedZoneId(newZone.id)
     setDrawMode(false)
-  }, [zones.length, zoneIdCounter, setZones, setSelectedZoneId])
+  }, [zones, zoneIdCounter, commitZones, setSelectedZoneId])
 
   const handleZoneUpdate = useCallback((id: string, position: GesturePosition) => {
-    setZones(prev =>
-      prev.map(z => (z.id === id ? { ...z, position } : z)),
-    )
-  }, [])
+    const target = zones.find(z => z.id === id)
+    if (!target) return
+
+    // No-op skip guard: a drag that ends where it started (or a sub-pixel
+    // nudge) must not push an empty undo step.
+    const [pa, px0, py0, px1, py1] = target.position
+    const [na, nx0, ny0, nx1, ny1] = position
+    if (pa === na && px0 === nx0 && py0 === ny0 && px1 === nx1 && py1 === ny1) {
+      return
+    }
+
+    const after = zones.map(z => (z.id === id ? { ...z, position } : z))
+    commitZones(zones, after, 'Move/resize zone')
+  }, [zones, commitZones])
 
   const handleZonePatch = useCallback((
     id: string,
     patch: Partial<Pick<EditorZone, 'name' | 'color' | 'type' | 'active' | 'locked'>>,
   ) => {
-    setZones(prev =>
-      prev.map(z => (z.id === id ? { ...z, ...patch } : z)),
-    )
-  }, [setZones])
+    const after = zones.map(z => (z.id === id ? { ...z, ...patch } : z))
+    commitZones(zones, after, 'Edit zone')
+  }, [zones, commitZones])
 
   const outlinedButtonClassName = libraryOutlinedButtonClassName()
 
@@ -333,39 +354,8 @@ export function Editor() {
       <div className="flex min-h-0 flex-1">
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <header className={`shrink-0 ${libraryToolbarClassName()}`}>
-            <div className="flex h-12 items-center">
+            <div className="flex h-12 items-center -mx-4">
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className={outlinedButtonClassName}
-                  onClick={() => console.log('Undo')}
-                  aria-label="Undo"
-                >
-                  <ArrowCounterClockwise size={16} weight="regular" className="shrink-0" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className={outlinedButtonClassName}
-                  onClick={() => console.log('Redo')}
-                  aria-label="Redo"
-                >
-                  <ArrowClockwise size={16} weight="regular" className="shrink-0" aria-hidden="true" />
-                </button>
-                <div className="mx-1 h-5 w-px bg-border-panel" aria-hidden="true" />
-                <button
-                  type="button"
-                  className={outlinedButtonClassName}
-                  onClick={() => {
-                    setSelectedZoneId(null)
-                    setDrawMode(true)
-                  }}
-                >
-                  <Plus size={14} weight="regular" className="shrink-0" aria-hidden="true" />
-                  Add zone
-                </button>
-              </div>
-
-              <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"
                   className={outlinedButtonClassName}
@@ -383,15 +373,73 @@ export function Editor() {
                 </button>
                 <EditorPresetKebabMenu outlinedButtonClassName={outlinedButtonClassName} />
               </div>
+
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  className={outlinedButtonClassName}
+                  onClick={undo}
+                  disabled={!canUndo}
+                  aria-label="Undo"
+                >
+                  <ArrowCounterClockwise size={16} weight="regular" className="shrink-0" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={outlinedButtonClassName}
+                  onClick={redo}
+                  disabled={!canRedo}
+                  aria-label="Redo"
+                >
+                  <ArrowClockwise size={16} weight="regular" className="shrink-0" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </header>
 
           <div className="relative min-h-0 flex-1">
             <div ref={canvasContainerRef} className="absolute inset-4 overflow-hidden rounded-2xl border border-border-panel bg-bg-base">
+              {/* Scale label */}
+              <div className="pointer-events-none absolute left-5 right-4 top-4 z-10 flex items-center">
+                <span className="text-sm font-light text-text-secondary opacity-70">
+                  {presetScale} · {presetRoot}{presetOctave}
+                </span>
+              </div>
+
+              <div className="pointer-events-none absolute right-4 top-4 z-10 flex items-center">
+                {drawMode || zones.length === 0 ? (
+                  <div
+                    className="pointer-events-none rounded px-3 py-1.5 text-xs font-light"
+                    style={{ background: 'var(--color-accent)', color: 'var(--color-text-primary)', opacity: 0.9 }}
+                  >
+                    Draw mode — drag to create zone
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedZoneId(null); setDrawMode(true) }}
+                    className={`${outlinedButtonClassName} pointer-events-auto`}
+                  >
+                    <Plus size={14} weight="regular" className="shrink-0" aria-hidden="true" />
+                    Add zone
+                  </button>
+                )}
+              </div>
+
+              {/* Empty state guidance */}
+              {zones.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2">
+                  <p className="text-base font-light text-text-primary">No zones yet</p>
+                  <p className="max-w-[240px] text-center text-sm font-light text-text-muted opacity-70">
+                    Click and drag on the canvas to draw your first zone, or wave your hand over Quray
+                  </p>
+                </div>
+              )}
+
               <FanCanvas
                 zones={zones}
                 selectedZoneId={selectedZoneId}
-                drawMode={drawMode}
+                drawMode={effectiveDrawMode}
                 onZoneSelect={handleZoneSelect}
                 onZoneCreate={handleZoneCreate}
                 onZoneUpdate={handleZoneUpdate}

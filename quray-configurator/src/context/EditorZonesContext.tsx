@@ -22,6 +22,7 @@ import { ZONE_PALETTE } from '@/constants/zonePalette'
 import type { EditorZone, GesturePosition } from '@/types'
 import { duplicateZoneRecord } from '@/utils/zoneActions'
 import { buildScaleNotes, distributeNotes } from '@/utils/scales'
+import { useUndoHistory } from '@/utils/undoHistory'
 
 function shufflePalette(arr: string[]): string[] {
   const a = [...arr]
@@ -73,6 +74,18 @@ type EditorZonesContextValue = {
   myDevices: string[]
   addMyDevice: (deviceId: string) => void
   removeMyDevice: (deviceId: string) => void
+  /**
+   * Apply a zones change and record it on the undo stack.
+   * `before`/`after` are full `zones` content snapshots (no UI state).
+   * No command is pushed when `before` and `after` are reference-equal.
+   */
+  commitZones: (before: EditorZone[], after: EditorZone[], description?: string) => void
+  /** Replace zones without recording history and clear the stack (preset load). */
+  resetZones: (next: EditorZone[]) => void
+  undo: () => void
+  redo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 const EditorZonesContext = createContext<EditorZonesContextValue | null>(null)
@@ -137,6 +150,65 @@ export function EditorZonesProvider({
   const [myDevices, setMyDevices] = useState<string[]>([])
   const colorPoolRef = useRef<string[]>(shufflePalette([...ZONE_PALETTE]))
 
+  const { push: historyPush, undo, redo, clear: historyClear, canUndo, canRedo } = useUndoHistory(100)
+
+  // Synchronous mirrors of the latest zones/selection. These are updated
+  // inside applyZones (NOT via useEffect) so that two commits fired in the same
+  // tick read the correct "before" snapshot. Initialised to the first render's
+  // values; kept current by every path that mutates zones/selection.
+  const zonesRef = useRef<EditorZone[]>(initialZones)
+  const selectedZoneIdRef = useRef<string | null>(null)
+  zonesRef.current = zones
+  selectedZoneIdRef.current = selectedZoneId
+
+  /**
+   * Apply a zones snapshot and reconcile selection. Updates zonesRef
+   * synchronously before the state setters so subsequent reads are fresh.
+   * Selection is clamped to an existing zone (or null) — it is never restored
+   * from a command, which prevents undo/redo from selecting a deleted zone.
+   */
+  const applyZones = useCallback((next: EditorZone[]) => {
+    zonesRef.current = next
+    setZones(next)
+
+    const currentSelection = selectedZoneIdRef.current
+    if (currentSelection !== null && !next.some((zone) => zone.id === currentSelection)) {
+      selectedZoneIdRef.current = null
+      setSelectedZoneId(null)
+    }
+  }, [])
+
+  /**
+   * Apply `after` and push an undo command that restores `before`.
+   * No-op (no command) when before/after are reference-equal — callers pass the
+   * same array reference back when nothing changed (e.g. an idle drag).
+   */
+  const commitZones = useCallback(
+    (before: EditorZone[], after: EditorZone[], description?: string) => {
+      if (before === after) {
+        return
+      }
+
+      applyZones(after)
+      historyPush({
+        undo: () => applyZones(before),
+        redo: () => applyZones(after),
+        description,
+      })
+    },
+    [applyZones, historyPush],
+  )
+
+  /** Replace zones without recording history and clear the stack (preset load). */
+  const resetZones = useCallback(
+    (next: EditorZone[]) => {
+      zonesRef.current = next
+      setZones(next)
+      historyClear()
+    },
+    [historyClear],
+  )
+
   function pickNextZoneColor(): string {
     if (colorPoolRef.current.length === 0) {
       colorPoolRef.current = shufflePalette([...ZONE_PALETTE])
@@ -161,69 +233,68 @@ export function EditorZonesProvider({
     mappingId: string,
     patch: Partial<ZoneMapping>,
   ) => {
-    setZones((prev) =>
-      prev.map((zone) => {
-        if (zone.id !== zoneId) return zone
+    const before = zonesRef.current
+    const after = before.map((zone) => {
+      if (zone.id !== zoneId) return zone
 
-        const updatedMappings = zone.mappings.map((mapping) =>
-          mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
-        )
-        const primaryMapping = updatedMappings[0]
-        const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+      const updatedMappings = zone.mappings.map((mapping) =>
+        mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
+      )
+      const primaryMapping = updatedMappings[0]
+      const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
 
-        return {
-          ...zone,
-          mappings: updatedMappings,
-          type: deriveZoneTypeFromMappings(updatedMappings),
-          ...(autoName ? { name: autoName } : {}),
-        }
-      }),
-    )
-  }, [])
+      return {
+        ...zone,
+        mappings: updatedMappings,
+        type: deriveZoneTypeFromMappings(updatedMappings),
+        ...(autoName ? { name: autoName } : {}),
+      }
+    })
+    commitZones(before, after, 'Edit mapping')
+  }, [commitZones])
 
   const setMappingType = useCallback((
     zoneId: string,
     mappingId: string,
     type: ZoneMappingType,
   ) => {
-    setZones((prev) =>
-      prev.map((zone) => {
-        if (zone.id !== zoneId) return zone
+    const before = zonesRef.current
+    const after = before.map((zone) => {
+      if (zone.id !== zoneId) return zone
 
-        const updatedMappings = zone.mappings.map((mapping) =>
-          mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
-        )
-        const primaryMapping = updatedMappings[0]
-        const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+      const updatedMappings = zone.mappings.map((mapping) =>
+        mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
+      )
+      const primaryMapping = updatedMappings[0]
+      const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
 
-        return {
-          ...zone,
-          mappings: updatedMappings,
-          type: deriveZoneTypeFromMappings(updatedMappings),
-          ...(autoName ? { name: autoName } : {}),
-        }
-      }),
-    )
-  }, [])
+      return {
+        ...zone,
+        mappings: updatedMappings,
+        type: deriveZoneTypeFromMappings(updatedMappings),
+        ...(autoName ? { name: autoName } : {}),
+      }
+    })
+    commitZones(before, after, 'Change mapping type')
+  }, [commitZones])
 
   const addMapping = useCallback((zoneId: string) => {
     const newMapping = createDefaultMapping()
 
-    setZones((prev) =>
-      prev.map((zone) => {
-        if (zone.id !== zoneId) {
-          return zone
-        }
-
-        return patchZoneMappings(zone, (mappings) => [...mappings, newMapping])
-      }),
+    const before = zonesRef.current
+    const after = before.map((zone) =>
+      zone.id === zoneId
+        ? patchZoneMappings(zone, (mappings) => [...mappings, newMapping])
+        : zone,
     )
+    commitZones(before, after, 'Add mapping')
 
     return newMapping.id
-  }, [])
+  }, [commitZones])
 
   const deleteMapping = useCallback((zoneId: string, mappingId: string) => {
-    const zone = zones.find((entry) => entry.id === zoneId)
+    const before = zonesRef.current
+    const zone = before.find((entry) => entry.id === zoneId)
     if (!zone) {
       return
     }
@@ -233,91 +304,66 @@ export function EditorZonesProvider({
       return
     }
 
-    const removed = zone.mappings[index]
-
-    setZones((prev) =>
-      prev.map((entry) => {
-        if (entry.id !== zoneId) {
-          return entry
-        }
-
-        return patchZoneMappings(entry, (mappings) =>
-          mappings.filter((mapping) => mapping.id !== mappingId),
-        )
-      }),
+    const after = before.map((entry) =>
+      entry.id === zoneId
+        ? patchZoneMappings(entry, (mappings) =>
+            mappings.filter((mapping) => mapping.id !== mappingId),
+          )
+        : entry,
     )
+    commitZones(before, after, 'Delete mapping')
 
     setToast({
       message: 'Mapping deleted.',
       actionLabel: 'Undo',
-      onAction: () => {
-        setZones((current) =>
-          current.map((entry) => {
-            if (entry.id !== zoneId) {
-              return entry
-            }
-
-            const nextMappings = [...entry.mappings]
-            nextMappings.splice(index, 0, removed)
-
-            return {
-              ...entry,
-              mappings: nextMappings,
-              type: deriveZoneTypeFromMappings(nextMappings),
-            }
-          }),
-        )
-      },
+      // Single source of truth: the toast Undo replays the history command,
+      // keeping the undo/redo stacks consistent.
+      onAction: () => undo(),
     })
-  }, [zones])
+  }, [commitZones, undo])
 
   const duplicateZone = useCallback((id: string) => {
-    const sourceIndex = zones.findIndex((zone) => zone.id === id)
+    const before = zonesRef.current
+    const sourceIndex = before.findIndex((zone) => zone.id === id)
     if (sourceIndex === -1) {
       return
     }
 
-    const source = zones[sourceIndex]
+    const source = before[sourceIndex]
     const newId = `zone-${Date.now()}`
     const duplicate = duplicateZoneRecord(source, newId)
 
-    setZones((prev) => {
-      const next = [...prev]
-      next.splice(sourceIndex + 1, 0, {
-        ...duplicate,
-        mappings: cloneMappings(source.mappings),
-      })
-      return next
+    const after = [...before]
+    after.splice(sourceIndex + 1, 0, {
+      ...duplicate,
+      mappings: cloneMappings(source.mappings),
     })
+
+    commitZones(before, after, 'Duplicate zone')
     setSelectedZoneId(newId)
-  }, [zones])
+  }, [commitZones])
 
   const deleteZone = useCallback((id: string) => {
-    const index = zones.findIndex((zone) => zone.id === id)
+    const before = zonesRef.current
+    const index = before.findIndex((zone) => zone.id === id)
     if (index === -1) {
       return
     }
 
-    const zone = zones[index]
+    const zone = before[index]
+    const after = before.filter((entry) => entry.id !== id)
 
-    setZones((prev) => prev.filter((entry) => entry.id !== id))
-
-    if (selectedZoneId === id) {
-      setSelectedZoneId(null)
-    }
+    // applyZones reconciles selection: if the deleted zone was selected it is
+    // cleared. No need to touch selection here.
+    commitZones(before, after, `Delete ${zone.name}`)
 
     setToast({
       message: `Deleted ${zone.name}.`,
       actionLabel: 'Undo',
-      onAction: () => {
-        setZones((current) => {
-          const next = [...current]
-          next.splice(index, 0, zone)
-          return next
-        })
-      },
+      // Replays the history command so the stacks stay in sync.
+      onAction: () => undo(),
     })
-  }, [zones, selectedZoneId])
+  }, [commitZones, undo])
 
   const openZoneContextMenu = useCallback((zoneId: string, x: number, y: number) => {
     setZoneContextMenu({ zoneId, x, y })
@@ -328,77 +374,78 @@ export function EditorZonesProvider({
   }, [])
 
   const applySplit = useCallback((zoneId: string, mappingId: string) => {
-    setZones((prev) => {
-      const zone = prev.find((z) => z.id === zoneId)
-      if (!zone) return prev
+    const before = zonesRef.current
+    const zone = before.find((z) => z.id === zoneId)
+    if (!zone) return
 
-      const mapping = zone.mappings.find((m) => m.id === mappingId)
-      if (!mapping || mapping.type !== 'Note') return prev
+    const mapping = zone.mappings.find((m) => m.id === mappingId)
+    if (!mapping || mapping.type !== 'Note') return
 
-      const split = mapping.split
-      if (!split?.enabled) return prev
+    const split = mapping.split
+    if (!split?.enabled) return
 
-      const xDiv = split.xDivisions ?? 2
-      const yDiv = split.yDivisions ?? 2
-      const [, xMin, yMin, xMax, yMax] = zone.position as GesturePosition
+    const xDiv = split.xDivisions ?? 2
+    const yDiv = split.yDivisions ?? 2
+    const [, xMin, yMin, xMax, yMax] = zone.position as GesturePosition
 
-      const xStep = (xMax - xMin) / xDiv
-      const yStep = (yMax - yMin) / yDiv
+    const xStep = (xMax - xMin) / xDiv
+    const yStep = (yMax - yMin) / yDiv
 
-      const noteCount = xDiv * yDiv
-      const pool = buildScaleNotes(
-        presetScale,
-        presetRoot,
-        mapping.octave ?? presetOctave,
-        noteCount * 3,
-      )
-      const notes = distributeNotes(pool, split.mode, noteCount)
+    const noteCount = xDiv * yDiv
+    const pool = buildScaleNotes(
+      presetScale,
+      presetRoot,
+      mapping.octave ?? presetOctave,
+      noteCount * 3,
+    )
+    const notes = distributeNotes(pool, split.mode, noteCount)
 
-      const newZones: EditorZone[] = []
-      let noteIndex = 0
+    const newZones: EditorZone[] = []
+    let noteIndex = 0
 
-      for (let yi = 0; yi < yDiv; yi++) {
-        for (let xi = 0; xi < xDiv; xi++) {
-          const cellXMin = xMin + xi * xStep
-          const cellXMax = xMin + (xi + 1) * xStep
-          const cellYMin = yMin + yi * yStep
-          const cellYMax = yMin + (yi + 1) * yStep
-          const note = notes[noteIndex] ?? notes[0]
-          noteIndex++
+    for (let yi = 0; yi < yDiv; yi++) {
+      for (let xi = 0; xi < xDiv; xi++) {
+        const cellXMin = xMin + xi * xStep
+        const cellXMax = xMin + (xi + 1) * xStep
+        const cellYMin = yMin + yi * yStep
+        const cellYMax = yMin + (yi + 1) * yStep
+        const note = notes[noteIndex] ?? notes[0]
+        noteIndex++
 
-          const rootNote = note.replace(/\d+$/, '')
-          const octave = parseInt(note.match(/\d+$/)?.[0] ?? '4', 10)
+        const rootNote = note.replace(/\d+$/, '')
+        const octave = parseInt(note.match(/\d+$/)?.[0] ?? '4', 10)
 
-          const newMapping: ZoneMapping = {
-            id: createMappingId(),
-            type: 'Note',
-            channel: mapping.channel,
-            axis: mapping.axis,
-            rootNote,
-            octave,
-            split: { enabled: false, mode: 'Linear', xDivisions: 2, yDivisions: 2 },
-          }
-
-          newZones.push({
-            id: `${zoneId}-split-${xi}-${yi}-${Date.now()}`,
-            name: `${note}`,
-            color: pickNextZoneColor(),
-            type: 'Note',
-            active: true,
-            locked: false,
-            position: [true, cellXMin, cellYMin, cellXMax, cellYMax],
-            mappings: [newMapping],
-          })
+        const newMapping: ZoneMapping = {
+          id: createMappingId(),
+          type: 'Note',
+          channel: mapping.channel,
+          axis: mapping.axis,
+          rootNote,
+          octave,
+          split: { enabled: false, mode: 'Linear', xDivisions: 2, yDivisions: 2 },
         }
-      }
 
-      const result = prev.flatMap((z) => (z.id === zoneId ? newZones : [z]))
-      if (newZones.length > 0) {
-        setTimeout(() => setSelectedZoneId(newZones[0].id), 0)
+        newZones.push({
+          id: `${zoneId}-split-${xi}-${yi}-${Date.now()}`,
+          name: `${note}`,
+          color: pickNextZoneColor(),
+          type: 'Note',
+          active: true,
+          locked: false,
+          position: [true, cellXMin, cellYMin, cellXMax, cellYMax],
+          mappings: [newMapping],
+        })
       }
-      return result
-    })
-  }, [presetScale, presetRoot, presetOctave])
+    }
+
+    // Build the concrete result array once and record it. redo replays this
+    // exact array (no recompute) so non-deterministic notes/ids stay stable.
+    const after = before.flatMap((z) => (z.id === zoneId ? newZones : [z]))
+    commitZones(before, after, 'Split zone')
+    if (newZones.length > 0) {
+      setSelectedZoneId(newZones[0].id)
+    }
+  }, [presetScale, presetRoot, presetOctave, commitZones])
 
   return (
     <EditorZonesContext.Provider
@@ -429,6 +476,12 @@ export function EditorZonesProvider({
         myDevices,
         addMyDevice,
         removeMyDevice,
+        commitZones,
+        resetZones,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
       }}
     >
       {children}

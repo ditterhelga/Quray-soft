@@ -1,4 +1,4 @@
-import { ArrowSquareOut, DotsSixVertical, Minus, Star } from '@phosphor-icons/react'
+import { ArrowSquareOut, DotsSixVertical, Minus, Plus, Star } from '@phosphor-icons/react'
 import type { DraggableAttributes } from '@dnd-kit/core'
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
 import {
@@ -16,7 +16,9 @@ import {
   PRESET_TABLE_GRID_PANEL_OPEN,
   PRESET_TABLE_GRID_SETS,
   PRESET_TABLE_OUTPUT_CELL,
+  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_CELL,
+  PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
 import { DeviceSlotKebabMenu } from '@/components/device/DeviceSlotKebabMenu'
 import { PresetKebabMenu } from '@/components/library/PresetKebabMenu'
@@ -162,6 +164,8 @@ function PresetNameColumn({
   dragHandleAttributes?: DraggableAttributes
   dragHandleListeners?: SyntheticListenerMap
 }) {
+  const moodTags = preset.tags?.filter((t) => t !== 'Factory') ?? []
+
   const nameBlock = isRenaming ? (
     <PresetNameEditor
       initialName={preset.name}
@@ -193,6 +197,11 @@ function PresetNameColumn({
         />
         <div className="min-w-0">
           {nameBlock}
+          {variant !== 'explore' && moodTags.length > 0 && (
+          <p className="mt-1 truncate text-sm font-light text-text-muted">
+            {moodTags.join(' · ')}
+          </p>
+          )}
           {subLine}
         </div>
       </div>
@@ -214,6 +223,11 @@ function PresetNameColumn({
         </button>
         <div className="min-w-0">
           {nameBlock}
+          {variant !== 'explore' && moodTags.length > 0 && (
+          <p className="mt-1 truncate text-sm font-light text-text-muted">
+            {moodTags.join(' · ')}
+          </p>
+          )}
           {subLine}
         </div>
       </div>
@@ -224,6 +238,11 @@ function PresetNameColumn({
     return (
       <>
         {nameBlock}
+        {variant !== 'explore' && moodTags.length > 0 && (
+          <p className="mt-1 truncate text-sm font-light text-text-muted">
+            {moodTags.join(' · ')}
+          </p>
+        )}
         {subLine}
       </>
     )
@@ -242,6 +261,11 @@ function PresetNameColumn({
       />
       <div className="min-w-0">
         {nameBlock}
+        {variant !== 'explore' && moodTags.length > 0 && (
+          <p className="mt-1 truncate text-sm font-light text-text-muted">
+            {moodTags.join(' · ')}
+          </p>
+        )}
         {subLine}
       </div>
     </div>
@@ -421,6 +445,11 @@ export function PresetRow({
     navigate(`/editor/${preset.id}`)
   }
 
+  function handleAddToLibrary(event: MouseEvent) {
+    event.stopPropagation()
+    onPresetAction?.('add-to-library', preset.id)
+  }
+
   function handleRemoveFromSet(event: MouseEvent) {
     event.stopPropagation()
     onPresetAction?.('remove-from-set', preset.id)
@@ -453,6 +482,8 @@ export function PresetRow({
       ? setSyncStatusToChipStatus(memberSyncStatus)
       : preset.syncStatus)
 
+  const usesAlignedSetsGrid = !panelOpen && variant === 'library' && !showZones
+
   return (
     <article
       className={`${presetRowClassName(forceHover, isRenaming, nested)} ${dragStateClassName}`.trim()}
@@ -463,7 +494,7 @@ export function PresetRow({
       aria-label={isRenaming || isDragOverlay || readOnly ? undefined : rowAriaLabel}
     >
       <div className={gridClassName}>
-        <div className="min-w-0">
+        <div className={variant === 'explore' ? 'min-w-0 pl-4' : 'min-w-0'}>
           <PresetNameColumn
             preset={preset}
             forceHover={forceHover}
@@ -481,31 +512,47 @@ export function PresetRow({
           />
         </div>
 
-        {!panelOpen && variant === 'library' && (
-          <div className={PRESET_TABLE_STATUS_CELL}>
-            <StatusChipCell status={statusChipValue} />
-          </div>
+        {!panelOpen && variant === 'library' && (showOutput || !showZones) && (
+          <div aria-hidden="true" />
         )}
 
-        {!panelOpen && showOutput && variant === 'library' && <div aria-hidden="true" />}
-
         {!panelOpen && showOutput && (
-          <div className={PRESET_TABLE_OUTPUT_CELL}>
+          <div
+            className={`${PRESET_TABLE_OUTPUT_CELL}${
+              variant === 'library' || variant === 'explore'
+                ? ` ${PRESET_TABLE_OUTPUT_CELL_OFFSET}`
+                : ''
+            }`}
+          >
             {preset.outputTypes.map((outputType) => (
               <OutputChip key={outputType} label={formatOutputLabel(outputType)} />
             ))}
           </div>
         )}
 
+        {usesAlignedSetsGrid && !showOutput && (
+          <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
+        )}
+
         {!panelOpen && showZones && (
-          <div>
+          <div className={variant === 'library' ? PRESET_TABLE_ZONES_CELL_LIBRARY : undefined}>
             <ZoneBadge count={preset.zoneCount} />
           </div>
+        )}
+
+        {usesAlignedSetsGrid && (
+          <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
         )}
 
         {!panelOpen && (
           <div className={presetRelativeTimeClassName()}>
             {formatRelativeTime(preset.lastUpdated)}
+          </div>
+        )}
+
+        {!panelOpen && variant === 'library' && (
+          <div className={PRESET_TABLE_STATUS_CELL}>
+            <StatusChipCell status={statusChipValue} />
           </div>
         )}
 
@@ -559,22 +606,37 @@ export function PresetRow({
                 </button>
               </Tooltip>
             )}
-            <Tooltip content="Open in editor" className={presetRowActionTooltipClassName}>
-              <button
-                type="button"
-                onClick={handleOpenInEditor}
-                className={presetRowActionButtonClassName()}
-                aria-label="Open in editor"
-              >
-                <ArrowSquareOut size={18} weight="regular" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <PresetKebabMenu
-              presetId={preset.id}
-              variant={nested ? 'nested-set' : variant}
-              forceOpen={forceKebabOpen}
-              onItemSelect={handlePresetAction}
-            />
+            {variant === 'explore' ? (
+              <Tooltip content="Add to library" className={presetRowActionTooltipClassName}>
+                <button
+                  type="button"
+                  onClick={handleAddToLibrary}
+                  className={presetRowActionButtonClassName()}
+                  aria-label="Add to library"
+                >
+                  <Plus size={18} weight="regular" aria-hidden="true" />
+                </button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Open in editor" className={presetRowActionTooltipClassName}>
+                <button
+                  type="button"
+                  onClick={handleOpenInEditor}
+                  className={presetRowActionButtonClassName()}
+                  aria-label="Open in editor"
+                >
+                  <ArrowSquareOut size={18} weight="regular" aria-hidden="true" />
+                </button>
+              </Tooltip>
+            )}
+            {variant !== 'explore' && (
+              <PresetKebabMenu
+                presetId={preset.id}
+                variant={nested ? 'nested-set' : variant}
+                forceOpen={forceKebabOpen}
+                onItemSelect={handlePresetAction}
+              />
+            )}
           </div>
         </div>
         )}

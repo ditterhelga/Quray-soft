@@ -4,7 +4,7 @@ import { useEditorZones } from '@/context/EditorZonesContext'
 export function EditorZoneOverlays() {
   const {
     zones,
-    setZones,
+    commitZones,
     zoneContextMenu,
     closeZoneContextMenu,
     duplicateZone,
@@ -37,20 +37,18 @@ export function EditorZoneOverlays() {
         }}
         onToggleLocked={() => {
           if (zoneContextMenu) {
-            setZones((prev) =>
-              prev.map((z) =>
-                z.id === zoneContextMenu.zoneId ? { ...z, locked: !z.locked } : z,
-              ),
+            const after = zones.map((z) =>
+              z.id === zoneContextMenu.zoneId ? { ...z, locked: !z.locked } : z,
             )
+            commitZones(zones, after, 'Toggle locked')
           }
         }}
         onToggleActive={() => {
           if (zoneContextMenu) {
-            setZones((prev) =>
-              prev.map((z) =>
-                z.id === zoneContextMenu.zoneId ? { ...z, active: !z.active } : z,
-              ),
+            const after = zones.map((z) =>
+              z.id === zoneContextMenu.zoneId ? { ...z, active: !z.active } : z,
             )
+            commitZones(zones, after, 'Toggle active')
           }
         }}
         onClose={closeZoneContextMenu}

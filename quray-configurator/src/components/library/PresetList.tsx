@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Plus } from '@phosphor-icons/react'
 import { BulkActionBar } from '@/components/library/BulkActionBar'
 import { LibraryViewToggle, type ListView } from '@/components/library/LibraryViewToggle'
 import {
@@ -13,12 +14,15 @@ import { presetRowNameWithCheckboxClassName } from '@/components/library/presetR
 import { PresetTableSortHeader } from '@/components/library/PresetTableSortHeader'
 import { PresetRow } from '@/components/library/PresetRow'
 import { SetRow } from '@/components/library/SetRow'
+import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import {
   PRESET_TABLE_HEADER,
   PRESET_TABLE_HEADER_EXPLORE,
   PRESET_TABLE_HEADER_PANEL_OPEN,
   PRESET_TABLE_HEADER_SETS,
   PRESET_TABLE_STATUS_HEADER_CELL,
+  PRESET_TABLE_OUTPUT_CELL_OFFSET,
+  PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
 import type { SortKey } from '@/utils/sortPresets'
 import type { Preset, Set as LibrarySet } from '@/types'
@@ -36,6 +40,7 @@ type SetListProps = {
   onToggleSetFavourite?: (setId: string) => void
   onSetPresetAction?: (actionId: string, setId: string, presetId: string) => void
   onAddPresetToSet?: (setId: string) => void
+  onNewSet?: () => void
 }
 
 type PresetListSharedProps = {
@@ -116,6 +121,7 @@ export function PresetListStickyHeader({
             )}
           </div>
         )}
+        {sets.length > 0 && (
         <div className={presetListTableHeaderClassName()}>
           <div className={PRESET_TABLE_HEADER_SETS}>
             <div className={presetRowNameWithCheckboxClassName()}>
@@ -134,16 +140,20 @@ export function PresetListStickyHeader({
                 onSort={onSortChange}
               />
             </div>
-            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+            <span aria-hidden="true" />
+            <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
+            <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
             <PresetTableSortHeader
               label="Last updated"
               sortKey="lastUpdated"
               activeSortKey={sortKey}
               onSort={onSortChange}
             />
+            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
             <span aria-hidden="true" />
           </div>
         </div>
+        )}
       </>
     )
   }
@@ -185,18 +195,17 @@ export function PresetListStickyHeader({
               onSort={onSortChange}
             />
           </div>
-          {!panelOpen && variant === 'library' && (
-            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
-          )}
           {!panelOpen && variant === 'library' && <span aria-hidden="true" />}
-          {!panelOpen && <span>Output</span>}
+          {!panelOpen && <span className={PRESET_TABLE_OUTPUT_CELL_OFFSET}>Output</span>}
           {!panelOpen && (
-            <PresetTableSortHeader
-              label="Zones"
-              sortKey="zones"
-              activeSortKey={sortKey}
-              onSort={onSortChange}
-            />
+            <div className={variant === 'library' ? PRESET_TABLE_ZONES_CELL_LIBRARY : undefined}>
+              <PresetTableSortHeader
+                label="Zones"
+                sortKey="zones"
+                activeSortKey={sortKey}
+                onSort={onSortChange}
+              />
+            </div>
           )}
           {!panelOpen && (
             <PresetTableSortHeader
@@ -205,6 +214,9 @@ export function PresetListStickyHeader({
               activeSortKey={sortKey}
               onSort={onSortChange}
             />
+          )}
+          {!panelOpen && variant === 'library' && (
+            <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
           )}
           <span aria-hidden="true" />
         </div>
@@ -242,6 +254,7 @@ export function PresetListBody({
   onToggleSetFavourite = () => undefined,
   onSetPresetAction = () => undefined,
   onAddPresetToSet = () => undefined,
+  onNewSet,
   view,
   panelOpen = false,
 }: PresetListBodyProps) {
@@ -257,7 +270,22 @@ export function PresetListBody({
     if (sets.length === 0) {
       return (
         <div className={libraryListBodyClassName()}>
-          <p className={presetListBodyEmptyClassName()}>No sets match your search</p>
+          <div className="flex flex-col items-center justify-center gap-4 px-8 py-24 text-center">
+            <p className="text-base font-light text-text-primary">No sets yet</p>
+            <p className="max-w-xs text-sm font-light text-text-muted">
+              Group presets into sets to load them to Quray in one action
+            </p>
+            {onNewSet && (
+              <button
+                type="button"
+                onClick={onNewSet}
+                className={libraryOutlinedButtonClassName()}
+              >
+                <Plus size={16} weight="regular" aria-hidden="true" />
+                New set
+              </button>
+            )}
+          </div>
         </div>
       )
     }
@@ -296,7 +324,10 @@ export function PresetListBody({
   if (presets.length === 0) {
     return (
       <div className={libraryListBodyClassName()}>
-        <p className={presetListBodyEmptyClassName()}>No presets match your filters</p>
+        <div className="flex flex-col gap-2 px-4 py-10">
+          <p className="text-base font-light text-text-primary">No presets match your filters</p>
+          <p className="text-sm font-light text-text-muted">Try adjusting or clearing your filters</p>
+        </div>
       </div>
     )
   }

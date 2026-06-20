@@ -110,7 +110,7 @@ export function PresetDetailPanel({
         </button>
       </Tooltip>
 
-      <FanVisualization zones={preset.zones} />
+      <FanVisualization zones={preset.zones} presetId={preset.id} />
 
       <PresetDetailPanelBody
         variant={variant}
@@ -124,22 +124,9 @@ export function PresetDetailPanel({
       <footer className={presetDetailPanelFooterClassName()}>
         <div className={presetDetailPanelFooterPrimaryActionsClassName()}>
           {isExplore ? (
-            <>
-              <Button
-                type="button"
-                onClick={onAddToLibrary}
-                className="w-full justify-center"
-              >
-                Add to library
-              </Button>
-              <button
-                type="button"
-                onClick={onExport}
-                className={presetDetailPanelSendToQurayButtonClassName()}
-              >
-                Export preset
-              </button>
-            </>
+            <Button type="button" onClick={onAddToLibrary} className="w-full justify-center">
+              Add to library
+            </Button>
           ) : (
             <>
               <Button

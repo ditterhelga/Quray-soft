@@ -32,7 +32,9 @@ import { SetKebabMenu } from '@/components/library/SetKebabMenu'
 import {
   PRESET_TABLE_ACTIONS_CELL,
   PRESET_TABLE_GRID_SETS,
+  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_CELL,
+  PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
 import {
   presetNameClassName,
@@ -563,16 +565,20 @@ export function SetRow({
             )}
           </div>
 
+          <span aria-hidden="true" />
+          <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
+          <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
+
+          <div className={presetRelativeTimeClassName()}>
+            {formatRelativeTime(set.lastUpdated.toISOString().slice(0, 10))}
+          </div>
+
           <div className={PRESET_TABLE_STATUS_CELL}>
             <Tooltip content={statusLabel} className="relative inline-flex shrink-0">
               <span aria-label={statusLabel}>
                 <StatusChip status={chipStatus} />
               </span>
             </Tooltip>
-          </div>
-
-          <div className={presetRelativeTimeClassName()}>
-            {formatRelativeTime(set.lastUpdated.toISOString().slice(0, 10))}
           </div>
 
           {readOnly && deviceSlotKebab ? (

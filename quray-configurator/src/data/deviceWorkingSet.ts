@@ -28,3 +28,19 @@ export const DEVICE_WORKING_SET: DeviceSlot[] = [
   { type: 'set', setId: 's2' },
   { type: 'preset', presetId: 'p12', syncStatus: 'current' },
 ]
+
+export const FRESH_DEVICE_PRESET_SYNC: Record<string, DeviceSyncStatus> = {
+  'factory-1': 'current',
+  'factory-2': 'current',
+  'factory-3': 'current',
+  'factory-4': 'current',
+  'factory-5': 'current',
+}
+
+export const FRESH_DEVICE_WORKING_SET: DeviceSlot[] = [
+  { type: 'preset', presetId: 'factory-1', syncStatus: 'current' },
+  { type: 'preset', presetId: 'factory-2', syncStatus: 'current' },
+  { type: 'preset', presetId: 'factory-3', syncStatus: 'current' },
+  { type: 'preset', presetId: 'factory-4', syncStatus: 'current' },
+  { type: 'preset', presetId: 'factory-5', syncStatus: 'current' },
+]

@@ -7,6 +7,7 @@ import StatusOnIcon from '@/assets/icons/status-on.svg?react'
 import StatusNoneIcon from '@/assets/icons/status-none.svg?react'
 import {
   ArrowLeft,
+  CaretDown,
   CaretRight,
   Check,
   MusicNote,
@@ -21,7 +22,7 @@ import { useEditorZones } from '@/context/EditorZonesContext'
 import type { EditorZone } from '@/types'
 import { useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Divider } from '@/components/ui/Divider'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -196,6 +197,9 @@ function PresetColorPopover({
         zIndex: 50,
       }}
     >
+      <span className="mb-4 block text-center text-xs font-light text-text-muted">
+        Sets the LED color on the device
+      </span>
       <div
         className="relative h-8 w-full rounded-lg mb-4 overflow-hidden cursor-pointer flex"
         style={{
@@ -255,10 +259,6 @@ function PresetColorPopover({
           className="min-w-0 flex-1 bg-transparent text-right text-sm font-light text-text-primary outline-none uppercase"
         />
       </label>
-
-      <span className="mt-3 block text-center text-xs font-light text-text-muted">
-        Sets the LED color on the device
-      </span>
     </div>
   )
 }
@@ -365,39 +365,40 @@ function PresetScalePopover({
 
       <div className="my-3 mx-6 border-t border-border-subtle" />
 
-      <div className="flex flex-col gap-3 px-6">
-        <label
-          className={zoneFieldCardClassName()}
+      <div className="px-6">
+        <div
+          className="flex cursor-pointer items-center py-2.5"
           onClick={() => rootSelectRef.current?.click()}
         >
           <span className="shrink-0 text-sm font-light text-text-muted">Root note</span>
-          <select
-            ref={rootSelectRef}
-            value={root}
-            onChange={(event) => onRootChange(event.target.value)}
-            className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-          >
-            {ROOT_NOTE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className={zoneFieldCardClassName()}>
+          <div className="ml-auto flex items-center gap-1">
+            <select
+              ref={rootSelectRef}
+              value={root}
+              onChange={(event) => onRootChange(event.target.value)}
+              className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-sm font-light text-text-primary outline-none"
+            >
+              {ROOT_NOTE_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            <CaretDown size={12} weight="regular" className="shrink-0 text-text-muted" aria-hidden="true" />
+          </div>
+        </div>
+        <div className="flex items-center py-2.5">
           <span className="shrink-0 text-sm font-light text-text-muted">Octave</span>
-          <select
-            value={String(octave)}
-            onChange={(event) => onOctaveChange(Number(event.target.value))}
-            className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-          >
-            {['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <div className="ml-auto flex items-center gap-1">
+            <select
+              value={String(octave)}
+              onChange={(event) => onOctaveChange(Number(event.target.value))}
+              className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-sm font-light text-text-primary outline-none"
+            >
+              {['-1','0','1','2','3','4','5','6','7','8','9'].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            <CaretDown size={12} weight="regular" className="shrink-0 text-text-muted" aria-hidden="true" />
+          </div>
         </div>
       </div>
     </div>
@@ -605,6 +606,7 @@ export function Sidebar({
   onOpenDeviceSettings,
 }: SidebarProps) {
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const presetIdMatch = location.pathname.match(/^\/editor\/(.+)$/)
   const presetId = presetIdMatch?.[1]
   const editorPreset = presetId ? findEditorPreset(presetId) : undefined
@@ -615,7 +617,7 @@ export function Sidebar({
     colorB: '#cd00ff',
   }
   const isEditor = location.pathname.startsWith('/editor/')
-  const isFreshMode = location.pathname === '/'
+  const isFreshMode = location.pathname === '/' || searchParams.get('fresh') === '1'
   const navigate = useNavigate()
   const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave } = useEditorZones()
   const [presetName, setPresetName] = useState(MOCK_PRESET.name)
@@ -668,7 +670,14 @@ export function Sidebar({
                 : 'left-0 translate-x-0 translate-y-1 opacity-100'
             }`}
           >
-            <QurayLogo className="block shrink-0" aria-label="Quray" />
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              aria-label="Go to Library"
+              className="cursor-pointer transition-opacity duration-[120ms] hover:opacity-80"
+            >
+              <QurayLogo className="block shrink-0" aria-hidden="true" />
+            </button>
           </div>
 
           <button
@@ -706,14 +715,23 @@ export function Sidebar({
 
       {isEditor ? (
         isCollapsed ? (
-          <div className="min-h-0 flex-1" aria-hidden="true" />
+          <div className="flex min-h-0 flex-1 flex-col items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors duration-[120ms] hover:bg-bg-active hover:text-text-primary"
+              aria-label="Back to Library"
+            >
+              <ArrowLeft size={20} className="shrink-0" />
+            </button>
+          </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
             <div className="px-6 pt-4">
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="relative flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-2 text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
+                className="-ml-4 flex h-12 w-[calc(100%+1.5rem)] cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
               >
                 <ArrowLeft size={20} className="shrink-0" />
                 <span>Back to Library</span>
@@ -834,58 +852,64 @@ export function Sidebar({
                 Zones
               </p>
 
-              <ul className="flex flex-col gap-3 px-4">
-                {zones.map((zone, index) => {
-                  const isSelected = zone.id === selectedZoneId
-                  const statusSubLabel = editorZoneStatusSubLabel(zone)
+              {zones.length === 0 ? (
+                <p className="px-6 py-2 text-sm font-light text-text-muted">
+                  No zones yet. Draw on the canvas to add one.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3 px-4">
+                  {zones.map((zone, index) => {
+                    const isSelected = zone.id === selectedZoneId
+                    const statusSubLabel = editorZoneStatusSubLabel(zone)
 
-                  return (
-                    <li key={zone.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedZoneId(zone.id)}
-                        onContextMenu={(event) => {
-                          event.preventDefault()
-                          setSelectedZoneId(zone.id)
-                          openZoneContextMenu(zone.id, event.clientX, event.clientY)
-                        }}
-                        className={`flex items-center h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
-                          isSelected ? 'relative' : ''
-                        }`}
-                      >
-                        {isSelected && (
+                    return (
+                      <li key={zone.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedZoneId(zone.id)}
+                          onContextMenu={(event) => {
+                            event.preventDefault()
+                            setSelectedZoneId(zone.id)
+                            openZoneContextMenu(zone.id, event.clientX, event.clientY)
+                          }}
+                          className={`flex items-center h-12 w-full pl-5 pr-4 rounded-xl border border-border-active bg-bg-active cursor-pointer hover:bg-bg-row-hover transition-colors duration-[120ms] ease-in-out ${
+                            isSelected ? 'relative' : ''
+                          }`}
+                        >
+                          {isSelected && (
+                            <span
+                              className="absolute -left-px top-1/2 h-[28px] w-[3px] -translate-y-1/2 bg-accent"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span className="mr-5 shrink-0 text-sm font-medium text-text-muted">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <div className="min-w-0 flex-1 text-left">
+                            <span
+                              className={`block truncate text-sm font-light ${
+                                isSelected ? 'text-text-primary' : 'text-text-muted'
+                              }`}
+                            >
+                              {zone.name}
+                            </span>
+                            {statusSubLabel && (
+                              <span className="block text-[10px] leading-tight text-text-muted">
+                                {statusSubLabel}
+                              </span>
+                            )}
+                          </div>
                           <span
-                            className="absolute -left-px top-1/2 h-[28px] w-[3px] -translate-y-1/2 bg-accent"
+                            className="ml-auto h-[10px] w-[10px] shrink-0 rounded-sm"
+                            style={{ background: zone.color }}
                             aria-hidden="true"
                           />
-                        )}
-                        <span className="mr-5 shrink-0 text-sm font-medium text-text-muted">
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-                        <div className="min-w-0 flex-1 text-left">
-                          <span
-                            className={`block truncate text-sm font-light ${
-                              isSelected ? 'text-text-primary' : 'text-text-muted'
-                            }`}
-                          >
-                            {zone.name}
-                          </span>
-                          {statusSubLabel && (
-                            <span className="block text-[10px] leading-tight text-text-muted">
-                              {statusSubLabel}
-                            </span>
-                          )}
-                        </div>
-                        <span
-                          className="ml-auto h-[10px] w-[10px] shrink-0 rounded-sm"
-                          style={{ background: zone.color }}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
             </section>
 
             {colorPopoverOpen && (
@@ -933,7 +957,12 @@ export function Sidebar({
             }`}
           >
             <NavItem to="/" end label="Library" icon={LibraryIcon} isCollapsed={isCollapsed} />
-            <NavItem to="/device" label="Device" icon={DeviceIcon} isCollapsed={isCollapsed} />
+            <NavItem
+              to={isFreshMode ? '/device?fresh=1' : '/device'}
+              label="Device"
+              icon={DeviceIcon}
+              isCollapsed={isCollapsed}
+            />
           </nav>
 
           {isCollapsed ? (

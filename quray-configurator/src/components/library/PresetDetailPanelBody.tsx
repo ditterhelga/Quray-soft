@@ -50,7 +50,7 @@ export function PresetDetailPanelBody({
   onNavigateToSet,
 }: PresetDetailPanelBodyProps) {
   const isExplore = variant === 'explore'
-  const [zonesExpanded, setZonesExpanded] = useState(false)
+  const [zonesExpanded, setZonesExpanded] = useState(true)
   const zoneCount = preset.zones.length
   const statusMeta = getPresetSyncStatusMeta(preset.syncStatus)
   const StatusIcon = statusMeta.Icon
@@ -117,6 +117,36 @@ export function PresetDetailPanelBody({
         </dl>
       </section>
 
+      {!isExplore && (
+        <section className={presetDetailPanelSectionClassName()}>
+          <h3 className={presetDetailPanelSectionHeaderClassName()}>
+            In sets · {memberSets.length}
+          </h3>
+          <div className="mt-4">
+            {memberSets.length === 0 ? (
+              <p className={presetDetailPanelEmptyStateClassName()}>Not in any set</p>
+            ) : (
+              memberSets.map((set) => (
+                <button
+                  key={set.id}
+                  type="button"
+                  onClick={() => onNavigateToSet(set.id)}
+                  className={presetDetailPanelSetRowClassName()}
+                >
+                  <span className={presetDetailPanelSetRowLabelClassName()}>{set.name}</span>
+                  <ArrowSquareOut
+                    size={16}
+                    weight="regular"
+                    className="shrink-0 text-text-muted"
+                    aria-hidden="true"
+                  />
+                </button>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
       <section className={presetDetailPanelSectionClassName()}>
         <button
           type="button"
@@ -155,36 +185,6 @@ export function PresetDetailPanelBody({
           </div>
         )}
       </section>
-
-      {!isExplore && (
-        <section className={presetDetailPanelSectionClassName()}>
-          <h3 className={presetDetailPanelSectionHeaderClassName()}>
-            In sets · {memberSets.length}
-          </h3>
-          <div className="mt-4">
-            {memberSets.length === 0 ? (
-              <p className={presetDetailPanelEmptyStateClassName()}>Not in any set</p>
-            ) : (
-              memberSets.map((set) => (
-                <button
-                  key={set.id}
-                  type="button"
-                  onClick={() => onNavigateToSet(set.id)}
-                  className={presetDetailPanelSetRowClassName()}
-                >
-                  <span className={presetDetailPanelSetRowLabelClassName()}>{set.name}</span>
-                  <ArrowSquareOut
-                    size={16}
-                    weight="regular"
-                    className="shrink-0 text-text-muted"
-                    aria-hidden="true"
-                  />
-                </button>
-              ))
-            )}
-          </div>
-        </section>
-      )}
     </div>
   )
 }

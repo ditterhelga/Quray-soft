@@ -1,4 +1,4 @@
-import { CaretDown, Plus } from '@phosphor-icons/react'
+import { CaretDown, Plus, SlidersHorizontal } from '@phosphor-icons/react'
 import KebabIcon from '@/assets/icons/kebab-icon.svg?react'
 import {
   forwardRef,
@@ -308,7 +308,7 @@ export function ZoneSettings({
     presetScale,
     presetRoot,
     applySplit,
-    setZones,
+    commitZones,
     deleteZone,
   } = useEditorZones()
   const [openMappingIds, setOpenMappingIds] = useState<Set<string>>(new Set())
@@ -326,13 +326,23 @@ export function ZoneSettings({
 
   if (!selectedZone) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-0 px-5 py-4">
-        <p className="text-sm text-text-muted">Select a zone to edit</p>
-        <p className="mt-2 text-xs text-text-muted">or</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-8">
+        <SlidersHorizontal
+          size={28}
+          weight="light"
+          className="text-text-muted opacity-40"
+          aria-hidden="true"
+        />
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-sm font-light text-text-primary">No zone selected</p>
+          <p className="max-w-[180px] text-xs font-light leading-relaxed text-text-muted">
+            Select a zone on the canvas to configure its output — Note, CC or CV mappings.
+          </p>
+        </div>
         {onAddZone && (
           <button
             type="button"
-            className={`mt-3 ${libraryOutlinedButtonClassName()}`}
+            className={libraryOutlinedButtonClassName()}
             onClick={onAddZone}
           >
             <Plus size={14} weight="regular" className="shrink-0" aria-hidden="true" />
@@ -386,12 +396,10 @@ export function ZoneSettings({
                   id: createMappingId(),
                 })),
               }
-              setZones((prev) => {
-                const idx = prev.findIndex((z) => z.id === zoneId)
-                const next = [...prev]
-                next.splice(idx + 1, 0, newZone)
-                return next
-              })
+              const idx = zones.findIndex((z) => z.id === zoneId)
+              const after = [...zones]
+              after.splice(idx + 1, 0, newZone)
+              commitZones(zones, after, 'Duplicate zone')
             }}
             onDelete={() => deleteZone(zoneId)}
           />

@@ -938,7 +938,7 @@ export function Library({ mode = 'full' }: LibraryProps) {
     />
   )
 
-  const listBody = <PresetListBody {...listProps} view={view} />
+  const listBody = <PresetListBody {...listProps} view={view} onNewSet={handleNewSet} />
 
   return (
     <>

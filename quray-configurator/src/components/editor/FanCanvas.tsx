@@ -614,15 +614,6 @@ export function FanCanvas({
         hatchPatternRef.current,
       )
 
-      const scaleLabel = `${presetScaleRef.current} · ${presetRootRef.current}${presetOctaveRef.current}`
-      ctx.save()
-      ctx.font = 'normal 14px "Space Grotesk", sans-serif'
-      ctx.fillStyle = 'rgba(164, 173, 226, 0.7)'
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'top'
-      ctx.fillText(scaleLabel, 24, 24)
-      ctx.restore()
-
       // Draw in-progress ghost if creating a zone
       const d = drag.current
       if (d.type === 'create') {
@@ -864,19 +855,6 @@ export function FanCanvas({
         style={{ display: 'block' }}
       />
 
-      {/* Draw-mode badge */}
-      {drawMode && (
-        <div
-          className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-xs font-normal pointer-events-none"
-          style={{
-            background: 'var(--color-accent)',
-            color:      'var(--color-text-primary)',
-            opacity:    0.92,
-          }}
-        >
-          Draw mode — drag to create zone
-        </div>
-      )}
     </div>
   )
 }

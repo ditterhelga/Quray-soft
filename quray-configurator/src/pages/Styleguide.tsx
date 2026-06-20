@@ -70,7 +70,9 @@ import {
   PRESET_TABLE_HEADER_EXPLORE,
   PRESET_TABLE_HEADER_SETS,
   PRESET_TABLE_MIN_WIDTH_CLASS,
+  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_HEADER_CELL,
+  PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
 import { DEVICE_PRESET_SYNC, DEVICE_WORKING_SET } from '@/data/deviceWorkingSet'
 import { PRESETS } from '@/data/presets'
@@ -1407,11 +1409,11 @@ export function Styleguide() {
                         onSort={() => undefined}
                       />
                     </div>
-                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                     <span>Output</span>
                     <span>Zones</span>
                     <span>Last updated</span>
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                   </div>
                 </StyleguideWidePreview>
@@ -1484,7 +1486,6 @@ export function Styleguide() {
                         onSort={() => undefined}
                       />
                     </div>
-                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                     <span>Output</span>
                     <PresetTableSortHeader
@@ -1499,6 +1500,7 @@ export function Styleguide() {
                       activeSortKey="lastUpdated"
                       onSort={() => undefined}
                     />
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                   </div>
                 </StyleguideWidePreview>
@@ -1813,13 +1815,16 @@ export function Styleguide() {
                       />
                       <span>Name</span>
                     </div>
-                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
+                    <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
                     <span>Last updated</span>
+                    <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                     <span aria-hidden="true" />
                   </div>
                 </StyleguideWidePreview>
                 <p className="mt-4 text-sm font-light text-text-muted">
-                  Three data columns — Name, Status (aggregated from members), Last updated · no
+                  Three data columns — Name, Last updated, Status (aggregated from members) · no
                   Output or Zones.
                 </p>
               </div>
@@ -2456,11 +2461,11 @@ export function Styleguide() {
                         />
                         <span>Name</span>
                       </div>
-                      <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                       <span aria-hidden="true" />
                       <span>Output</span>
                       <span>Zones</span>
                       <span>Last updated</span>
+                      <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
                       <span aria-hidden="true" />
                     </div>
                   </div>

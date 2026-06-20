@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
 import { DeviceToolbar } from '@/components/device/DeviceToolbar'
 import { DeviceWorkingSetList } from '@/components/device/DeviceWorkingSetList'
@@ -7,9 +7,12 @@ import { Toast } from '@/components/ui/Toast'
 import {
   DEVICE_PRESET_SYNC,
   DEVICE_WORKING_SET,
+  FRESH_DEVICE_PRESET_SYNC,
+  FRESH_DEVICE_WORKING_SET,
   type DeviceSlot,
   type DeviceSyncStatus,
 } from '@/data/deviceWorkingSet'
+import { FACTORY_PRESETS } from '@/data/factoryPresets'
 import { PRESETS } from '@/data/presets'
 import { SETS } from '@/data/sets'
 import { focusLibrarySet } from '@/utils/deviceNavigation'
@@ -52,18 +55,30 @@ function markAllSlotsCurrent(
 }
 
 export function Device() {
+  const [searchParams] = useSearchParams()
+  const isFreshMode = searchParams.get('fresh') === '1'
   const navigate = useNavigate()
-  const [slots, setSlots] = useState<DeviceSlot[]>(() => [...DEVICE_WORKING_SET])
-  const [presetSync, setPresetSync] = useState<DevicePresetSyncMap>(createInitialPresetSync)
+  const [slots, setSlots] = useState<DeviceSlot[]>(() =>
+    isFreshMode ? [...FRESH_DEVICE_WORKING_SET] : [...DEVICE_WORKING_SET],
+  )
+  const [presetSync, setPresetSync] = useState<DevicePresetSyncMap>(() =>
+    isFreshMode ? { ...FRESH_DEVICE_PRESET_SYNC } : createInitialPresetSync(),
+  )
   const [orderChanged, setOrderChanged] = useState(false)
   const [removedSlotCount, setRemovedSlotCount] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [toast, setToast] = useState<ToastState | null>(null)
 
-  const setsById = useMemo(() => new Map(SETS.map((set) => [set.id, set])), [])
+  const setsById = useMemo(
+    () => (isFreshMode ? new Map() : new Map(SETS.map((set) => [set.id, set]))),
+    [isFreshMode],
+  )
   const presetsById = useMemo(
-    () => new Map(PRESETS.map((preset) => [preset.id, preset])),
-    [],
+    () =>
+      isFreshMode
+        ? new Map(FACTORY_PRESETS.map((preset) => [preset.id, preset]))
+        : new Map(PRESETS.map((preset) => [preset.id, preset])),
+    [isFreshMode],
   )
 
   const needsSyncCount = useMemo(
@@ -123,7 +138,7 @@ export function Device() {
   }
 
   function handleEditPreset(presetId: string) {
-    navigate(`/editor?presetId=${presetId}`)
+    navigate(`/editor/${presetId}`)
   }
 
   function removeSlot(slotId: string) {
@@ -212,8 +227,8 @@ export function Device() {
 
         <DeviceWorkingSetList
           slots={slots}
-          sets={SETS}
-          presets={PRESETS}
+          sets={isFreshMode ? [] : SETS}
+          presets={isFreshMode ? FACTORY_PRESETS : PRESETS}
           presetSync={presetSync}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
