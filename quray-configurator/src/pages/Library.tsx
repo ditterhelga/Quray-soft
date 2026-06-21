@@ -50,6 +50,7 @@ import {
   type SortKey,
 } from '@/utils/sortPresets'
 import { consumeLibrarySetFocus } from '@/utils/deviceNavigation'
+import { useDeviceContext } from '@/context/DeviceContext'
 import { useSidebar } from '@/context/SidebarContext'
 
 type ToastState = {
@@ -68,6 +69,7 @@ type LibraryProps = {
 }
 
 export function Library({ mode = 'full' }: LibraryProps) {
+  const { sendPresetToDevice, sendSetToDevice } = useDeviceContext()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<LibraryTab>('library')
   const [presets, setPresets] = useState(() => mode === 'fresh' ? [...FACTORY_PRESETS] : [...PRESETS])
@@ -353,13 +355,15 @@ export function Library({ mode = 'full' }: LibraryProps) {
   }
 
   function handleOpenInEditor(presetId: string) {
-    navigate(`/editor/${presetId}`)
+    const preset = presets.find((entry) => entry.id === presetId)
+    navigate(`/editor/${presetId}`, { state: { presetName: preset?.name } })
   }
 
   function handleSendPresetToQuray(presetId: string) {
     const preset = presets.find((entry) => entry.id === presetId)
+    sendPresetToDevice(presetId, preset ?? undefined)
     setToast({
-      message: preset ? `Sending ${preset.name} to Quray…` : 'Sending preset to Quray…',
+      message: preset ? `${preset.name} sent to Quray.` : 'Preset sent to Quray.',
     })
   }
 
@@ -813,12 +817,12 @@ export function Library({ mode = 'full' }: LibraryProps) {
     }
 
     if (actionId === 'send-to-quray') {
-      console.log('Send set to Quray', setId)
+      sendSetToDevice(setId)
       return
     }
 
     if (actionId === 'export') {
-      console.log('Export set', setId)
+      setToast({ message: 'Export is coming soon.' })
       return
     }
 
@@ -865,11 +869,11 @@ export function Library({ mode = 'full' }: LibraryProps) {
 
   function handleBulkExport() {
     if (isSetsView) {
-      console.log('Export sets', [...selectedIds])
+      setToast({ message: 'Export is coming soon.' })
       return
     }
 
-    console.log('Export presets', [...selectedIds])
+    setToast({ message: 'Export is coming soon.' })
   }
 
   const listProps = {
@@ -957,6 +961,7 @@ export function Library({ mode = 'full' }: LibraryProps) {
           onOnlyFavouritesChange={setOnlyFavourites}
           onClearAllFilters={handleClearAllFilters}
           onNewPreset={() => navigate('/editor/preset-empty')}
+          onImport={() => setToast({ message: 'Import is coming soon.' })}
           stickyHeader={listHeader}
           detailPanel={
             selectedPreset ? (

@@ -8,6 +8,7 @@ type LibraryToolbarProps = {
   activeTab: LibraryTab
   onActiveTabChange: (tab: LibraryTab) => void
   onNewPreset?: () => void
+  onImport?: () => void
 }
 
 export function libraryToolbarClassName() {
@@ -30,6 +31,7 @@ export function LibraryToolbar({
   activeTab,
   onActiveTabChange,
   onNewPreset,
+  onImport,
 }: LibraryToolbarProps) {
   return (
     <div className={libraryToolbarClassName()}>
@@ -52,7 +54,7 @@ export function LibraryToolbar({
         </nav>
 
         <div className={libraryToolbarActionsClassName()}>
-          <button type="button" className={libraryToolbarImportClassName()}>
+          <button type="button" className={libraryToolbarImportClassName()} onClick={onImport}>
             <DownloadSimple size={18} weight="regular" className="shrink-0" aria-hidden="true" />
             Import
           </button>

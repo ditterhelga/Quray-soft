@@ -6,7 +6,7 @@ import {
   UploadSimple,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { FanCanvas } from '@/components/editor/FanCanvas'
 import { ZoneSettings } from '@/components/editor/ZoneSettings'
@@ -15,6 +15,7 @@ import { Toast } from '@/components/ui/Toast'
 import { ZONE_PALETTE } from '@/constants/zonePalette'
 import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
+import { useDeviceContext } from '@/context/DeviceContext'
 import { libraryToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import type { EditorZone, GesturePosition } from '@/types'
@@ -254,6 +255,8 @@ const MOCK_ZONES: EditorZone[] = [
 
 export function Editor() {
   const { presetId } = useParams<{ presetId: string }>()
+  const { sendPresetToDevice } = useDeviceContext()
+  const location = useLocation()
   const navigate = useNavigate()
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
@@ -296,7 +299,7 @@ export function Editor() {
     // so undo can never cross presets.
     resetZones(editorPreset?.zones ?? [])
     setSelectedZoneId(null)
-    setPresetName(editorPreset?.name ?? 'New Preset')
+    setPresetName(location.state?.presetName ?? editorPreset?.name ?? 'New Preset')
   }, [presetId, resetZones, setSelectedZoneId])
 
   useEffect(() => {
@@ -373,7 +376,8 @@ export function Editor() {
                       setToast({ message: 'No mappings assigned. Add at least one mapping before syncing.' })
                       return
                     }
-                    console.log('Send to Quray')
+                    sendPresetToDevice(presetId ?? 'preset-empty')
+                    setToast({ message: 'Preset sent to Quray.' })
                   }}
                 >
                   <UploadSimple size={14} weight="regular" className="shrink-0" aria-hidden="true" />

@@ -442,7 +442,7 @@ export function PresetRow({
       return
     }
 
-    navigate(`/editor/${preset.id}`)
+    navigate(`/editor/${preset.id}`, { state: { presetName: preset.name } })
   }
 
   function handleAddToLibrary(event: MouseEvent) {

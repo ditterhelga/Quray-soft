@@ -35,6 +35,7 @@ type LibraryShellProps = {
   onOnlyFavouritesChange: (value: boolean) => void
   onClearAllFilters: () => void
   onNewPreset?: () => void
+  onImport?: () => void
 }
 
 /**
@@ -69,6 +70,7 @@ export function LibraryShell({
   onOnlyFavouritesChange,
   onClearAllFilters,
   onNewPreset,
+  onImport,
 }: LibraryShellProps) {
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
   const hasFilterPills = hasActiveFilters(filters, onlyFavourites, filterKeys)
@@ -77,7 +79,7 @@ export function LibraryShell({
     <div className="min-w-0 w-full max-w-full bg-bg-base">
       <div className="hero-glow pb-8">
         <Header />
-        <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} onNewPreset={onNewPreset} />
+        <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} onNewPreset={onNewPreset} onImport={onImport} />
         <LibraryFiltersRow
           activeTab={activeTab}
           filters={filters}

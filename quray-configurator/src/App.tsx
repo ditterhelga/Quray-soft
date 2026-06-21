@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
+import { DeviceProvider } from '@/context/DeviceContext'
 import { AppShell } from './components/layout/AppShell'
 import { Library } from './pages/Library'
 import { Device } from './pages/Device'
@@ -12,6 +13,7 @@ function FullLibrary() {
 
 export function App() {
   return (
+    <DeviceProvider>
     <BrowserRouter>
       <Routes>
         <Route path="styleguide" element={<Styleguide />} />
@@ -25,5 +27,6 @@ export function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </DeviceProvider>
   )
 }

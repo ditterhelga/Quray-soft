@@ -1,12 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useDeviceContext } from '@/context/DeviceContext'
 import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
 import { DeviceToolbar } from '@/components/device/DeviceToolbar'
 import { DeviceWorkingSetList } from '@/components/device/DeviceWorkingSetList'
 import { Toast } from '@/components/ui/Toast'
 import {
-  DEVICE_PRESET_SYNC,
-  DEVICE_WORKING_SET,
   FRESH_DEVICE_PRESET_SYNC,
   FRESH_DEVICE_WORKING_SET,
   type DeviceSlot,
@@ -35,10 +34,6 @@ type ToastState = {
   onAction?: () => void
 }
 
-function createInitialPresetSync(): DevicePresetSyncMap {
-  return { ...DEVICE_PRESET_SYNC }
-}
-
 function markAllSlotsCurrent(
   slots: DeviceSlot[],
   presetSync: DevicePresetSyncMap,
@@ -55,31 +50,52 @@ function markAllSlotsCurrent(
 }
 
 export function Device() {
+  const { slots, setSlots, presetSync, setPresetSync, extraPresets } = useDeviceContext()
   const [searchParams] = useSearchParams()
   const isFreshMode = searchParams.get('fresh') === '1'
   const navigate = useNavigate()
-  const [slots, setSlots] = useState<DeviceSlot[]>(() =>
-    isFreshMode ? [...FRESH_DEVICE_WORKING_SET] : [...DEVICE_WORKING_SET],
-  )
-  const [presetSync, setPresetSync] = useState<DevicePresetSyncMap>(() =>
-    isFreshMode ? { ...FRESH_DEVICE_PRESET_SYNC } : createInitialPresetSync(),
-  )
   const [orderChanged, setOrderChanged] = useState(false)
   const [removedSlotCount, setRemovedSlotCount] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [toast, setToast] = useState<ToastState | null>(null)
 
+  useEffect(() => {
+    if (isFreshMode) {
+      const extraPresetIds = new Set(Object.keys(extraPresets))
+      setSlots((current) => {
+        const sentSlots = current.filter(
+          (slot) => slot.type === 'preset' && extraPresetIds.has(slot.presetId),
+        )
+        return [...FRESH_DEVICE_WORKING_SET, ...sentSlots]
+      })
+      setPresetSync((current) => {
+        const extraSync = Object.fromEntries(
+          Object.entries(current).filter(([id]) => extraPresetIds.has(id)),
+        )
+        return { ...FRESH_DEVICE_PRESET_SYNC, ...extraSync }
+      })
+    }
+  }, [isFreshMode, setSlots, setPresetSync, extraPresets])
+
   const setsById = useMemo(
     () => (isFreshMode ? new Map() : new Map(SETS.map((set) => [set.id, set]))),
     [isFreshMode],
   )
-  const presetsById = useMemo(
-    () =>
-      isFreshMode
-        ? new Map(FACTORY_PRESETS.map((preset) => [preset.id, preset]))
-        : new Map(PRESETS.map((preset) => [preset.id, preset])),
-    [isFreshMode],
-  )
+  const presetsById = useMemo(() => {
+    const base = isFreshMode
+      ? new Map(FACTORY_PRESETS.map((preset) => [preset.id, preset]))
+      : new Map(PRESETS.map((preset) => [preset.id, preset]))
+    Object.values(extraPresets).forEach((preset) => base.set(preset.id, preset))
+    return base
+  }, [isFreshMode, extraPresets])
+
+  const allPresets = useMemo(() => {
+    const base = isFreshMode ? [...FACTORY_PRESETS] : [...PRESETS]
+    const extras = Object.values(extraPresets).filter(
+      (ep) => !base.some((p) => p.id === ep.id),
+    )
+    return [...base, ...extras]
+  }, [isFreshMode, extraPresets])
 
   const needsSyncCount = useMemo(
     () => countDeviceSlotsNeedingSync(slots, setsById, presetSync),
@@ -138,7 +154,8 @@ export function Device() {
   }
 
   function handleEditPreset(presetId: string) {
-    navigate(`/editor/${presetId}`)
+    const devicePreset = presetsById.get(presetId)
+    navigate(`/editor/${presetId}`, { state: { presetName: devicePreset?.name } })
   }
 
   function removeSlot(slotId: string) {
@@ -228,7 +245,7 @@ export function Device() {
         <DeviceWorkingSetList
           slots={slots}
           sets={isFreshMode ? [] : SETS}
-          presets={isFreshMode ? FACTORY_PRESETS : PRESETS}
+          presets={allPresets}
           presetSync={presetSync}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
