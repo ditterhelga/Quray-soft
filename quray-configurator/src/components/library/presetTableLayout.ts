@@ -21,7 +21,7 @@ export const PRESET_TABLE_HEADER_SETS =
 export const PRESET_TABLE_HEADER_EXPLORE =
   `${PRESET_TABLE_GRID_EXPLORE} pr-6 pl-4 text-sm font-light text-text-muted`
 
-export const PRESET_TABLE_ACTIONS_CELL = 'flex items-center justify-end gap-3'
+  export const PRESET_TABLE_ACTIONS_CELL = 'flex items-center justify-end gap-4'
 
 export const PRESET_TABLE_OUTPUT_CELL = 'flex flex-nowrap items-center gap-1'
 

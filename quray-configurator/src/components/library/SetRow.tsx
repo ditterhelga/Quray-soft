@@ -87,7 +87,7 @@ export function setRowExpandedInnerClassName() {
 }
 
 export function setRowExpandedGroupClassName() {
-  return 'mt-4 pl-8'
+  return 'mt-4'
 }
 
 export function setRowExpandedPresetsClassName() {

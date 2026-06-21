@@ -59,14 +59,14 @@ export function presetRowClassName(
     forceHover && !isRenaming ? 'bg-bg-row-hover' : ''
 
   if (nested) {
-    return `group bg-transparent py-8 pr-8 pl-4 transition-colors duration-[120ms] ${interactiveClassName} ${hoverStateClassName}`.trim()
+    return `group bg-transparent py-8 pr-6 pl-4 transition-colors duration-[120ms] ${interactiveClassName} ${hoverStateClassName}`.trim()
   }
 
   return `group rounded-lg border border-border bg-bg-active py-6 pr-6 pl-4 transition-colors duration-[120ms] ${interactiveClassName} ${hoverStateClassName}`.trim()
 }
 
 export function presetRowSecondaryActionsClassName(forceHover = false) {
-  return `flex items-center gap-3 transition-opacity duration-[120ms] ${
+  return `flex items-center gap-4 transition-opacity duration-[120ms] ${
     forceHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
   }`
 }
@@ -494,7 +494,7 @@ export function PresetRow({
       aria-label={isRenaming || isDragOverlay || readOnly ? undefined : rowAriaLabel}
     >
       <div className={gridClassName}>
-        <div className={variant === 'explore' ? 'min-w-0 pl-4' : 'min-w-0'}>
+        <div className={variant === 'explore' ? 'min-w-0 pl-4' : nested ? 'min-w-0 pl-8' : 'min-w-0'}>
           <PresetNameColumn
             preset={preset}
             forceHover={forceHover}
