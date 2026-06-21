@@ -21,7 +21,7 @@ import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { usePresetsContext } from '@/context/PresetsContext'
 import type { EditorZone } from '@/types'
-import type { Preset } from '@/types'
+import type { Preset, PresetZone } from '@/types'
 import { useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -470,7 +470,7 @@ function PresetLayoutPopover({
   hasZones,
 }: {
   currentLayoutId: string
-  anchorRef: React.RefObject<HTMLButtonElement>
+  anchorRef: React.RefObject<HTMLButtonElement | null>
   onClose: () => void
   onApply: (layoutId: string) => void
   hasZones: boolean
@@ -663,11 +663,11 @@ export function Sidebar({
         id: zone.id,
         name: zone.name,
         color: zone.color,
-        outputType: zone.mappings[0]?.type ?? zone.type ?? 'Note',
+        outputType: (zone.type ?? zone.mappings[0]?.type ?? 'Note') as PresetZone['outputType'],
         axis: zone.mappings[0]?.axis ?? 'Y',
         paramLabel: zone.mappings[0]?.type ?? 'Note',
       }))
-      const outputTypes = [...new Set(zones.map((z) => z.type).filter(Boolean))] as string[]
+      const outputTypes = [...new Set(zones.map((z) => z.type).filter(Boolean))] as unknown as Preset['outputTypes']
       const savedId = presetId === 'preset-empty' ? `preset-${Date.now()}` : presetId
       const savedPreset: Preset = {
         id: savedId,
@@ -775,16 +775,20 @@ export function Sidebar({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
             <div className="px-6 pt-4">
-              <div className="group relative">
+              <div className="group relative -ml-4 w-[calc(100%+1.5rem)]">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 bottom-[-12px] rounded-xl bg-transparent transition-colors duration-[120ms] group-hover:bg-white/[0.04]"
+                />
                 <button
                   type="button"
                   onClick={handleSaveAndBack}
-                  className="-ml-4 flex h-12 w-[calc(100%+1.5rem)] cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary transition-colors duration-[120ms] ease-in-out hover:bg-white/[0.04]"
+                  className="relative z-[1] flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary"
                 >
                   <ArrowLeft size={20} className="shrink-0" />
                   <span className="relative">
                     <span>Library</span>
-                    <span className="pointer-events-none absolute left-0 top-full text-xs font-light text-text-muted opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                    <span className="pointer-events-none absolute left-0 top-full whitespace-nowrap text-xs font-light text-text-muted opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                       All changes saved
                     </span>
                   </span>

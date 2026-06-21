@@ -3,7 +3,6 @@ import { Plus } from '@phosphor-icons/react'
 import { BulkActionBar } from '@/components/library/BulkActionBar'
 import { LibraryViewToggle, type ListView } from '@/components/library/LibraryViewToggle'
 import {
-  presetListBodyEmptyClassName,
   presetListBodyRowsClassName,
   presetListTableHeaderClassName,
   presetListToolbarClassName,

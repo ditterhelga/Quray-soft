@@ -1,7 +1,7 @@
 import { CaretRight, Check, MagnifyingGlass, PencilSimple, Trash } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MIDI_DEVICES, findMidiDevice, findMidiParameter } from '@/components/editor/midiDevices'
+import { MIDI_DEVICES, findMidiDevice } from '@/components/editor/midiDevices'
 import {
   CHORD_TYPES,
   createDefaultMapping,
@@ -14,13 +14,11 @@ import {
 } from '@/components/editor/zoneMappings'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import { useEditorZones } from '@/context/EditorZonesContext'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { StepperInput } from '@/components/ui/StepperInput'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { buildScaleNotes, distributeNotes, NOTE_NAMES, SCALES } from '@/utils/scales'
 
 const CHANNEL_OPTIONS = Array.from({ length: 16 }, (_, index) => String(index + 1))
-const GATE_CHANNEL_OPTIONS = ['1', '2', '3', '4']
 const cvRowClassName = 'flex h-11 items-center justify-between px-3'
 const mappingSectionClassName = 'flex flex-col gap-2'
 const mappingDividerClassName = 'my-2 border-t border-border-subtle'
@@ -48,41 +46,6 @@ function zoneFieldLabelClassName() {
 
 const textNumericInputClassName =
   'min-w-0 flex-1 bg-transparent text-right text-sm font-light text-text-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-
-function ZoneFieldSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string
-  value: string
-  options: string[]
-  onChange: (value: string) => void
-}) {
-  const selectRef = useRef<HTMLSelectElement>(null)
-
-  return (
-    <label
-      className={zoneFieldCardClassName()}
-      onClick={() => selectRef.current?.click()}
-    >
-      <span className={zoneFieldLabelClassName()}>{label}</span>
-      <select
-        ref={selectRef}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-w-0 cursor-pointer bg-transparent pr-1 text-right text-sm font-light text-text-primary outline-none"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
 
 function IntegerTextInput({
   value,
@@ -138,78 +101,6 @@ function IntegerTextInput({
       onKeyDown={handleKeyDown}
       className={className}
     />
-  )
-}
-
-function ZoneIntegerTextField({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string
-  value: number
-  min: number
-  max: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <label className={zoneFieldCardClassName()}>
-      <span className={zoneFieldLabelClassName()}>{label}</span>
-      <IntegerTextInput value={value} min={min} max={max} onChange={onChange} />
-    </label>
-  )
-}
-
-function ZoneDecimalTextField({
-  label,
-  value,
-  min,
-  max,
-  suffix,
-  onChange,
-}: {
-  label: string
-  value: number
-  min: number
-  max: number
-  suffix?: string
-  onChange: (value: number) => void
-}) {
-  const [draft, setDraft] = useState(String(value))
-
-  useEffect(() => {
-    setDraft(String(value))
-  }, [value])
-
-  function commit(raw: string) {
-    const parsed = Number.parseFloat(raw)
-    if (Number.isNaN(parsed)) {
-      setDraft(String(value))
-      return
-    }
-    const clamped = Math.max(min, Math.min(max, parsed))
-    const rounded = Math.round(clamped * 10) / 10
-    setDraft(String(rounded))
-    onChange(rounded)
-  }
-
-  return (
-    <label className={zoneFieldCardClassName()}>
-      <span className={zoneFieldLabelClassName()}>{label}</span>
-      <div className="flex min-w-0 flex-1 items-center gap-1">
-        <input
-          type="text"
-          inputMode="decimal"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => commit(draft)}
-          className={textNumericInputClassName}
-        />
-        {suffix && <span className="shrink-0 text-sm font-light text-text-muted">{suffix}</span>}
-      </div>
-    </label>
   )
 }
 

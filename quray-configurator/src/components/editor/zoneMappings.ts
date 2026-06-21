@@ -67,7 +67,7 @@ export function createDefaultMapping(type: ZoneMappingType = 'Note'): ZoneMappin
         octave: 4,
         chordMode: 'single',
         chordType: 'Major',
-        split: { enabled: false, mode: 'Linear', steps: 6, xDivisions: 2, yDivisions: 2 },
+        split: { enabled: false, mode: 'Linear', xDivisions: 2, yDivisions: 2 },
       }
     case 'CC':
       return {

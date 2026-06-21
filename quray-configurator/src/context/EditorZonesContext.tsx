@@ -17,7 +17,7 @@ import {
   type ZoneMapping,
   type ZoneMappingType,
 } from '@/components/editor/zoneMappings'
-import { findMidiDevice, findMidiParameter } from '@/components/editor/midiDevices'
+import { findMidiParameter } from '@/components/editor/midiDevices'
 import { ZONE_PALETTE } from '@/constants/zonePalette'
 import type { EditorZone, GesturePosition } from '@/types'
 import { duplicateZoneRecord } from '@/utils/zoneActions'

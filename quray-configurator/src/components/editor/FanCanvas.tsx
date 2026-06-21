@@ -344,7 +344,6 @@ function drawZones(
 
     // Shared baseline for all icons
     const BASE_Y = labelPos.y
-    const ICON_H = 10
     const iconBaseY = BASE_Y
 
     ctx.save()
