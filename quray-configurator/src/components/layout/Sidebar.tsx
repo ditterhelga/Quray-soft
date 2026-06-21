@@ -19,7 +19,9 @@ import { zoneFieldCardClassName } from '@/components/editor/ZoneMappingCard'
 import { ZONE_PALETTE } from '@/constants/zonePalette'
 import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
+import { usePresetsContext } from '@/context/PresetsContext'
 import type { EditorZone } from '@/types'
+import type { Preset } from '@/types'
 import { useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -620,6 +622,7 @@ export function Sidebar({
   const isFreshMode = location.pathname === '/' || searchParams.get('fresh') === '1'
   const navigate = useNavigate()
   const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave, presetName, setPresetName, renamePresetTrigger } = useEditorZones()
+  const { setFreshPresets, setFullPresets } = usePresetsContext()
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
@@ -652,6 +655,46 @@ export function Sidebar({
     }))
     setZones(newZones)
     setSelectedZoneId(null)
+  }
+
+  function handleSaveAndBack() {
+    if (isEditor && presetId) {
+      const presetZones = zones.map((zone) => ({
+        id: zone.id,
+        name: zone.name,
+        color: zone.color,
+        outputType: zone.mappings[0]?.type ?? zone.type ?? 'Note',
+        axis: zone.mappings[0]?.axis ?? 'Y',
+        paramLabel: zone.mappings[0]?.type ?? 'Note',
+      }))
+      const outputTypes = [...new Set(zones.map((z) => z.type).filter(Boolean))] as string[]
+      const savedId = presetId === 'preset-empty' ? `preset-${Date.now()}` : presetId
+      const savedPreset: Preset = {
+        id: savedId,
+        name: presetName,
+        devices: [],
+        tags: [],
+        outputTypes,
+        zoneCount: zones.length,
+        zones: presetZones,
+        lastUpdated: new Date().toISOString().split('T')[0],
+        syncStatus: 'not-synced',
+        isFavourite: false,
+      }
+      const isFactoryOrNew = presetId === 'preset-empty' || presetId.startsWith('factory-')
+      const updater = (current: Preset[]) => {
+        const exists = current.some((p) => p.id === savedId)
+        return exists
+          ? current.map((p) => (p.id === savedId ? savedPreset : p))
+          : [savedPreset, ...current]
+      }
+      if (isFactoryOrNew) {
+        setFreshPresets(updater)
+      } else {
+        setFullPresets(updater)
+      }
+    }
+    navigate('/')
   }
 
   return (
@@ -722,9 +765,9 @@ export function Sidebar({
           <div className="flex min-h-0 flex-1 flex-col items-center gap-3 pt-4">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={handleSaveAndBack}
               className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors duration-[120ms] hover:bg-bg-active hover:text-text-primary"
-              aria-label="Back to Library"
+              aria-label="Library"
             >
               <ArrowLeft size={20} className="shrink-0" />
             </button>
@@ -732,14 +775,21 @@ export function Sidebar({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
             <div className="px-6 pt-4">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="-ml-4 flex h-12 w-[calc(100%+1.5rem)] cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary hover:bg-white/[0.04] transition-colors duration-[120ms] ease-in-out"
-              >
-                <ArrowLeft size={20} className="shrink-0" />
-                <span>Back to Library</span>
-              </button>
+              <div className="group relative">
+                <button
+                  type="button"
+                  onClick={handleSaveAndBack}
+                  className="-ml-4 flex h-12 w-[calc(100%+1.5rem)] cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary transition-colors duration-[120ms] ease-in-out hover:bg-white/[0.04]"
+                >
+                  <ArrowLeft size={20} className="shrink-0" />
+                  <span className="relative">
+                    <span>Library</span>
+                    <span className="pointer-events-none absolute left-0 top-full text-xs font-light text-text-muted opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      All changes saved
+                    </span>
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="px-6 pb-5 pt-4">
@@ -773,15 +823,6 @@ export function Sidebar({
                 )}
                 <span>{mockSyncStatus === 'synced' ? 'Synced' : 'Not synced'}</span>
 
-                <span className="opacity-30">·</span>
-
-                {mockAutosaveStatus === 'saving' && <span>Saving…</span>}
-                {mockAutosaveStatus === 'saved' && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <StatusOnIcon className="h-3 w-3 shrink-0 text-status-positive" />
-                    Autosaved
-                  </span>
-                )}
                 {mockAutosaveStatus === 'error' && (
                   <span className="flex items-center gap-1 text-status-error">
                     <WarningCircle size={12} />

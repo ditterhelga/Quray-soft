@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { DeviceProvider } from '@/context/DeviceContext'
+import { PresetsProvider } from '@/context/PresetsContext'
 import { AppShell } from './components/layout/AppShell'
 import { Library } from './pages/Library'
 import { Device } from './pages/Device'
@@ -13,6 +14,7 @@ function FullLibrary() {
 
 export function App() {
   return (
+    <PresetsProvider>
     <DeviceProvider>
     <BrowserRouter>
       <Routes>
@@ -28,5 +30,6 @@ export function App() {
       </Routes>
     </BrowserRouter>
     </DeviceProvider>
+    </PresetsProvider>
   )
 }

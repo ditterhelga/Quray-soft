@@ -51,6 +51,7 @@ import {
 } from '@/utils/sortPresets'
 import { consumeLibrarySetFocus } from '@/utils/deviceNavigation'
 import { useDeviceContext } from '@/context/DeviceContext'
+import { usePresetsContext } from '@/context/PresetsContext'
 import { useSidebar } from '@/context/SidebarContext'
 
 type ToastState = {
@@ -70,10 +71,19 @@ type LibraryProps = {
 
 export function Library({ mode = 'full' }: LibraryProps) {
   const { sendPresetToDevice, sendSetToDevice } = useDeviceContext()
+  const {
+    freshPresets, setFreshPresets,
+    fullPresets, setFullPresets,
+    freshSets, setFreshSets,
+    fullSets, setFullSets,
+    favourites, setFavourites,
+  } = usePresetsContext()
+  const presets = mode === 'fresh' ? freshPresets : fullPresets
+  const setPresets = mode === 'fresh' ? setFreshPresets : setFullPresets
+  const sets = mode === 'fresh' ? freshSets : fullSets
+  const setSets = mode === 'fresh' ? setFreshSets : setFullSets
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<LibraryTab>('library')
-  const [presets, setPresets] = useState(() => mode === 'fresh' ? [...FACTORY_PRESETS] : [...PRESETS])
-  const [sets, setSets] = useState(() => mode === 'fresh' ? [] : [...SETS])
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS)
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
   const [openFilterAnchor, setOpenFilterAnchor] = useState<FilterAnchor | null>(
@@ -84,13 +94,6 @@ export function Library({ mode = 'full' }: LibraryProps) {
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_PRESET_SORT.sortKey)
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     DEFAULT_PRESET_SORT.sortDirection,
-  )
-  const [favourites, setFavourites] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries([
-      ...PRESETS.map((preset) => [preset.id, preset.isFavourite]),
-      ...EXPLORE_PRESETS.map((preset) => [preset.id, preset.isFavourite]),
-      ...SETS.map((set) => [set.id, false]),
-    ]),
   )
   const [renamingPresetId, setRenamingPresetId] = useState<string | null>(null)
   const [renamingSetId, setRenamingSetId] = useState<string | null>(null)
