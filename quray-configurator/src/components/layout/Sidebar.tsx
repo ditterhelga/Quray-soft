@@ -777,22 +777,19 @@ export function Sidebar({
           <div className="flex min-h-0 flex-1 flex-col px-0">
             <div className="px-6 pt-4">
               <div className="group relative -ml-4 w-[calc(100%+1.5rem)]">
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 bottom-[-12px] rounded-xl bg-transparent transition-colors duration-[120ms] group-hover:bg-white/[0.04]"
-                />
+                <div className="pointer-events-none absolute bottom-full left-8 mb-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  <div className="whitespace-nowrap rounded-lg bg-bg-hover px-3 py-1.5 text-xs font-light text-text-muted shadow-lg">
+                    All changes saved
+                  </div>
+                  <span className="block h-0 w-0 border-x-[5px] border-x-transparent border-t-[5px] border-t-bg-hover mx-auto" aria-hidden="true" />
+                </div>
                 <button
                   type="button"
                   onClick={handleSaveAndBack}
-                  className="relative z-[1] flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-transparent pl-4 text-text-secondary"
+                  className="relative flex h-12 w-full cursor-pointer items-center rounded-xl border border-transparent bg-transparent pl-6 text-text-secondary transition-colors duration-[120ms] hover:bg-white/[0.04]"
                 >
-                  <ArrowLeft size={20} className="shrink-0" />
-                  <span className="relative">
-                    <span>Library</span>
-                    <span className="pointer-events-none absolute left-0 top-full whitespace-nowrap text-xs font-light text-text-muted opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                      All changes saved
-                    </span>
-                  </span>
+                  <ArrowLeft size={14} className="absolute left-3 shrink-0 opacity-50" />
+                  <span>Library</span>
                 </button>
               </div>
             </div>

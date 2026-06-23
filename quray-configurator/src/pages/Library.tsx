@@ -54,6 +54,7 @@ import { useSidebar } from '@/context/SidebarContext'
 
 type ToastState = {
   message: string
+  key?: number
   actionLabel?: string
   onAction?: () => void
 }
@@ -376,10 +377,16 @@ export function Library({ mode = 'full' }: LibraryProps) {
 
   function handleSendPresetToQuray(presetId: string) {
     const preset = presets.find((entry) => entry.id === presetId)
-    sendPresetToDevice(presetId, preset ?? undefined)
     setToast({
       message: preset ? `${preset.name} sent to Quray.` : 'Preset sent to Quray.',
+      key: Date.now(),
     })
+    sendPresetToDevice(presetId, preset ?? undefined)
+    setPresets((current) =>
+      current.map((p) =>
+        p.id === presetId ? { ...p, syncStatus: 'on-quray' as const } : p,
+      ),
+    )
   }
 
   function handleNavigateToSet(setId: string) {
@@ -805,6 +812,16 @@ export function Library({ mode = 'full' }: LibraryProps) {
       return
     }
 
+    if (actionId === 'send-to-quray') {
+      handleSendPresetToQuray(presetId)
+      return
+    }
+
+    if (actionId === 'export') {
+      setToast({ message: 'Export coming soon.' })
+      return
+    }
+
     if (actionId === 'delete') {
       setDeleteConfirmPresetId(presetId)
     }
@@ -875,11 +892,29 @@ export function Library({ mode = 'full' }: LibraryProps) {
 
   function handleBulkSendToQuray() {
     if (isSetsView) {
-      console.log('Send sets to Quray', [...selectedIds])
+      const ids = [...selectedIds]
+      ids.forEach((setId) => sendSetToDevice(setId))
+      setToast({
+        message: ids.length === 1 ? 'Set sent to Quray.' : `${ids.length} sets sent to Quray.`,
+      })
       return
     }
 
-    console.log('Send to Quray', [...selectedIds])
+    const ids = [...selectedIds]
+    ids.forEach((presetId) => {
+      const preset = presets.find((entry) => entry.id === presetId)
+      sendPresetToDevice(presetId, preset ?? undefined)
+    })
+    setPresets((current) =>
+      current.map((p) =>
+        ids.includes(p.id) ? { ...p, syncStatus: 'on-quray' as const } : p,
+      ),
+    )
+    setToast({
+      message: ids.length === 1
+        ? `${presets.find((p) => p.id === ids[0])?.name ?? 'Preset'} sent to Quray.`
+        : `${ids.length} presets sent to Quray.`,
+    })
   }
 
   function handleBulkExport() {
@@ -978,6 +1013,7 @@ export function Library({ mode = 'full' }: LibraryProps) {
           deviceFilterOptions={deviceFilterOptions}
           onNewPreset={() => navigate('/editor/preset-empty')}
           onImport={() => setToast({ message: 'Import is coming soon.' })}
+          onHeaderClick={() => setSelectedPresetId(null)}
           stickyHeader={listHeader}
           detailPanel={
             selectedPreset ? (
@@ -1011,6 +1047,7 @@ export function Library({ mode = 'full' }: LibraryProps) {
 
       {toast && (
         <Toast
+          key={toast.key ?? toast.message}
           message={toast.message}
           onDismiss={dismissToast}
           actionLabel={toast.actionLabel}

@@ -36,10 +36,10 @@ type PresetKebabMenuItem = {
 
 const PRESET_KEBAB_MENU_ITEMS: PresetKebabMenuItem[] = [
   { id: 'open', label: 'Open in editor', icon: ArrowSquareOut },
-  { id: 'duplicate', label: 'Duplicate', icon: Copy },
-  { id: 'rename', label: 'Rename', icon: TextAa },
-  { id: 'add-to-set', label: 'Add to set', icon: FolderPlus },
   { id: 'send-to-quray', label: 'Send to Quray', icon: UploadSimple },
+  { id: 'add-to-set', label: 'Add to set', icon: FolderPlus },
+  { id: 'duplicate', label: 'Duplicate', icon: Copy, dividerBefore: true },
+  { id: 'rename', label: 'Rename', icon: TextAa },
   { id: 'export', label: 'Export', icon: DownloadSimple },
   { id: 'delete', label: 'Delete', icon: Trash, destructive: true, dividerBefore: true },
 ]

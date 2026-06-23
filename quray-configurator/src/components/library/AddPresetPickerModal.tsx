@@ -4,6 +4,7 @@ import {
   CommandPaletteModal,
   commandPaletteItemClassName,
 } from '@/components/library/CommandPaletteModal'
+import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import { confirmDialogConfirmClassName } from '@/components/ui/ConfirmDialog'
 import type { Preset } from '@/types'
@@ -92,9 +93,9 @@ export function AddPresetPickerModal({
           <button
             type="button"
             onClick={handleCreatePreset}
-            className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-light text-accent transition-colors duration-[120ms] hover:opacity-80"
+            className={libraryOutlinedButtonClassName()}
           >
-            <Plus size={14} weight="regular" className="shrink-0" aria-hidden="true" />
+            <Plus size={16} weight="regular" className="shrink-0" aria-hidden="true" />
             New preset
           </button>
           <div className="flex items-center gap-4">

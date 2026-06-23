@@ -104,10 +104,14 @@ export function PresetDetailPanelBody({
             </>
           ) : (
             <>
-              <dt className={presetDetailPanelMetadataLabelClassName()}>Device</dt>
-              <dd className={presetDetailPanelMetadataValueClassName()}>
-                {preset.devices.join(', ')}
-              </dd>
+              {preset.devices && preset.devices.length > 0 && (
+                <>
+                  <dt className={presetDetailPanelMetadataLabelClassName()}>Device</dt>
+                  <dd className={presetDetailPanelMetadataValueClassName()}>
+                    {preset.devices.join(', ')}
+                  </dd>
+                </>
+              )}
             </>
           )}
           <dt className={presetDetailPanelMetadataLabelClassName()}>Updated</dt>

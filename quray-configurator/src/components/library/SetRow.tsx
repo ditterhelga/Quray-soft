@@ -32,7 +32,6 @@ import { SetKebabMenu } from '@/components/library/SetKebabMenu'
 import {
   PRESET_TABLE_ACTIONS_CELL,
   PRESET_TABLE_GRID_SETS,
-  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_CELL,
   PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
@@ -198,7 +197,6 @@ function SortableSetPresetRow({
         onToggleFavourite={() => undefined}
         showZones={false}
         showFavourite={false}
-        showOutput={false}
         memberSyncStatus={memberSyncStatus}
         nested
         onRowClick={onPresetRowClick}
@@ -299,7 +297,6 @@ function SetExpandedPresets({
             onToggleFavourite={() => undefined}
             showZones={false}
             showFavourite={false}
-            showOutput={false}
             memberSyncStatus={devicePresetSyncById ? undefined : memberSyncStatus}
             deviceSyncStatus={
               devicePresetSyncById
@@ -566,10 +563,9 @@ export function SetRow({
           </div>
 
           <span aria-hidden="true" />
-          <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
           <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
 
-          <div className={presetRelativeTimeClassName()}>
+          <div className={`text-center ${presetRelativeTimeClassName()}`}>
             {formatRelativeTime(set.lastUpdated.toISOString().slice(0, 10))}
           </div>
 

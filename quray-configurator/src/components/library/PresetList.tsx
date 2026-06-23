@@ -20,7 +20,6 @@ import {
   PRESET_TABLE_HEADER_PANEL_OPEN,
   PRESET_TABLE_HEADER_SETS,
   PRESET_TABLE_STATUS_HEADER_CELL,
-  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
 import type { SortKey } from '@/utils/sortPresets'
@@ -140,14 +139,15 @@ export function PresetListStickyHeader({
               />
             </div>
             <span aria-hidden="true" />
-            <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
             <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
-            <PresetTableSortHeader
-              label="Last updated"
-              sortKey="lastUpdated"
-              activeSortKey={sortKey}
-              onSort={onSortChange}
-            />
+            <div className="flex justify-center">
+              <PresetTableSortHeader
+                label="Last updated"
+                sortKey="lastUpdated"
+                activeSortKey={sortKey}
+                onSort={onSortChange}
+              />
+            </div>
             <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
             <span aria-hidden="true" />
           </div>
@@ -195,9 +195,8 @@ export function PresetListStickyHeader({
             />
           </div>
           {!panelOpen && variant === 'library' && <span aria-hidden="true" />}
-          {!panelOpen && <span className={PRESET_TABLE_OUTPUT_CELL_OFFSET}>Output</span>}
           {!panelOpen && (
-            <div className={variant === 'library' ? PRESET_TABLE_ZONES_CELL_LIBRARY : undefined}>
+            <div className="flex justify-center">
               <PresetTableSortHeader
                 label="Zones"
                 sortKey="zones"
@@ -207,12 +206,14 @@ export function PresetListStickyHeader({
             </div>
           )}
           {!panelOpen && (
-            <PresetTableSortHeader
-              label="Last updated"
-              sortKey="lastUpdated"
-              activeSortKey={sortKey}
-              onSort={onSortChange}
-            />
+            <div className="flex justify-center">
+              <PresetTableSortHeader
+                label="Last updated"
+                sortKey="lastUpdated"
+                activeSortKey={sortKey}
+                onSort={onSortChange}
+              />
+            </div>
           )}
           {!panelOpen && variant === 'library' && (
             <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>

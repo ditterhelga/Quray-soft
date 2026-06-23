@@ -15,8 +15,6 @@ import {
   PRESET_TABLE_GRID_EXPLORE,
   PRESET_TABLE_GRID_PANEL_OPEN,
   PRESET_TABLE_GRID_SETS,
-  PRESET_TABLE_OUTPUT_CELL,
-  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_CELL,
   PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
@@ -28,7 +26,7 @@ import {
   presetRowFavouriteButtonClassName,
   presetRowRemoveFromSetButtonClassName,
 } from '@/components/library/presetRowActions'
-import { formatOutputLabel, OutputChip, ZoneBadge } from '@/components/ui/Badge'
+import { ZoneBadge } from '@/components/ui/Badge'
 import {
   presetRowCheckboxNameAlignClassName,
   presetRowCheckboxSlotClassName,
@@ -89,20 +87,6 @@ export {
 
 export function presetRelativeTimeClassName() {
   return 'text-sm font-light font-[300] tabular-nums text-text-primary opacity-70 [font-weight:300]'
-}
-
-function DeviceNames({ devices }: { devices: string[] }) {
-  const visible = devices.slice(0, 2)
-  const overflow = devices.length - visible.length
-
-  return (
-    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-light text-text-muted">
-      {visible.map((device) => (
-        <span key={device}>{device}</span>
-      ))}
-      {overflow > 0 && <span>+{overflow}</span>}
-    </div>
-  )
 }
 
 function TagNames({ tags }: { tags: string[] }) {
@@ -174,16 +158,31 @@ function PresetNameColumn({
     <PresetNameLine name={preset.name} forceHover={forceHover} />
   )
 
-  const subLine =
-    variant === 'explore' ? (
-      <TagNames tags={preset.tags ?? []} />
-    ) : preset.devices && preset.devices.length > 0 ? (
-      <DeviceNames devices={preset.devices} />
-    ) : preset.tags && preset.tags.length > 0 ? (
-      <TagNames tags={preset.tags.filter((t) => t !== 'Factory')} />
-    ) : preset.outputTypes && preset.outputTypes.length > 0 ? (
-      <TagNames tags={preset.outputTypes} />
-    ) : null
+  function formatOutputShort(outputType: string): string {
+    if (outputType === 'MIDI Note') return 'Note'
+    if (outputType === 'MIDI CC') return 'CC'
+    return outputType
+  }
+
+  const isFactory = preset.id.startsWith('factory-')
+  const filteredTags = (preset.tags ?? []).filter((t) => t !== 'Factory')
+  const outputLabels = (preset.outputTypes ?? []).map(formatOutputShort)
+
+  const subLine = (() => {
+    if (variant === 'explore' || isFactory) {
+      const parts = [...outputLabels, ...filteredTags]
+      return parts.length > 0 ? <TagNames tags={parts} /> : null
+    }
+    const devices = preset.devices ?? []
+    const devicePart =
+      devices.length > 1
+        ? [`${devices[0]} +${devices.length - 1}`]
+        : devices.length === 1
+          ? [devices[0]]
+          : []
+    const parts = [...outputLabels, ...devicePart]
+    return parts.length > 0 ? <TagNames tags={parts} /> : null
+  })()
 
   if (bulkSelectionEnabled && bulkActive) {
     return (
@@ -341,7 +340,6 @@ type PresetRowProps = {
   forceHover?: boolean
   forceKebabOpen?: boolean
   nested?: boolean
-  showOutput?: boolean
   memberSyncStatus?: SetSyncStatus
   deviceSyncStatus?: DeviceSyncStatus
   readOnly?: boolean
@@ -380,7 +378,6 @@ export function PresetRow({
   forceHover = false,
   forceKebabOpen = false,
   nested = false,
-  showOutput = true,
   memberSyncStatus,
   deviceSyncStatus,
   readOnly = false,
@@ -494,32 +491,12 @@ export function PresetRow({
           />
         </div>
 
-        {!panelOpen && variant === 'library' && (showOutput || !showZones) && (
+        {!panelOpen && variant === 'library' && (
           <div aria-hidden="true" />
         )}
 
-        {!panelOpen && showOutput && (
-          <div
-            className={`${PRESET_TABLE_OUTPUT_CELL}${
-              variant === 'library' || variant === 'explore'
-                ? ` ${PRESET_TABLE_OUTPUT_CELL_OFFSET}`
-                : ''
-            }`}
-          >
-            {preset.outputTypes.map((outputType) => {
-              const label = formatOutputLabel(outputType)
-              if (!label) return null
-              return <OutputChip key={outputType} label={label} />
-            })}
-          </div>
-        )}
-
-        {usesAlignedSetsGrid && !showOutput && (
-          <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
-        )}
-
         {!panelOpen && showZones && (
-          <div className={variant === 'library' ? PRESET_TABLE_ZONES_CELL_LIBRARY : undefined}>
+          <div className={`flex justify-center ${variant === 'library' ? PRESET_TABLE_ZONES_CELL_LIBRARY : ''}`}>
             <ZoneBadge count={preset.zoneCount} />
           </div>
         )}
@@ -529,7 +506,7 @@ export function PresetRow({
         )}
 
         {!panelOpen && (
-          <div className={presetRelativeTimeClassName()}>
+          <div className={`text-center ${presetRelativeTimeClassName()}`}>
             {formatRelativeTime(preset.lastUpdated)}
           </div>
         )}

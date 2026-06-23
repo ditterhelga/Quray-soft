@@ -130,18 +130,32 @@ function deriveZoneName(primaryMapping: ZoneMapping, mappingCount: number): stri
   return `${base}${extra}`
 }
 
+function mappingHasUserInput(mapping: ZoneMapping): boolean {
+  switch (mapping.type) {
+    case 'Note':
+      return mapping.rootNote !== 'C' || (mapping.octave ?? 4) !== 4
+    case 'CC':
+      if (mapping.ccInputMode === 'device')
+        return !!(mapping.ccDeviceId && mapping.ccParamId)
+      return (mapping.cc ?? 74) !== 74
+    case 'CV':
+      return (mapping.port ?? 1) !== 1 || mapping.cvMode !== 'Pitch'
+    case 'CV note':
+      return mapping.rootNote !== 'C' || (mapping.octave ?? 4) !== 4 || (mapping.port ?? 1) !== 1
+    default:
+      return false
+  }
+}
+
 function patchZoneMappings(
   zone: EditorZone,
   updater: (mappings: ZoneMapping[]) => ZoneMapping[],
 ): EditorZone {
   const mappings = updater(zone.mappings)
-  const primaryMapping = mappings[0]
-  const autoName = primaryMapping ? deriveZoneName(primaryMapping, mappings.length) : null
   return {
     ...zone,
     mappings,
     type: deriveZoneTypeFromMappings(mappings),
-    ...(autoName ? { name: autoName } : {}),
   }
 }
 
@@ -263,7 +277,10 @@ export function EditorZonesProvider({
         mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
       )
       const primaryMapping = updatedMappings[0]
-      const autoName = primaryMapping ? deriveZoneName(primaryMapping, updatedMappings.length) : null
+      const autoName =
+        primaryMapping && mappingHasUserInput(primaryMapping)
+          ? deriveZoneName(primaryMapping, updatedMappings.length)
+          : null
       return {
         ...zone,
         mappings: updatedMappings,
@@ -306,14 +323,11 @@ export function EditorZonesProvider({
       const updatedMappings = zone.mappings.map((mapping) =>
         mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
       )
-      const primaryMapping = updatedMappings[0]
-      const autoName = primaryMapping ? deriveZoneName(primaryMapping, updatedMappings.length) : null
 
       return {
         ...zone,
         mappings: updatedMappings,
         type: deriveZoneTypeFromMappings(updatedMappings),
-        ...(autoName ? { name: autoName } : {}),
       }
     })
     commitZones(before, after, 'Change mapping type')

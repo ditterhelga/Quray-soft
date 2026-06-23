@@ -36,6 +36,7 @@ type LibraryShellProps = {
   onClearAllFilters: () => void
   onNewPreset?: () => void
   onImport?: () => void
+  onHeaderClick?: () => void
   deviceFilterOptions?: FilterOption[]
 }
 
@@ -72,6 +73,7 @@ export function LibraryShell({
   onClearAllFilters,
   onNewPreset,
   onImport,
+  onHeaderClick,
   deviceFilterOptions,
 }: LibraryShellProps) {
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
@@ -79,7 +81,7 @@ export function LibraryShell({
 
   const pageContent = (
     <div className="min-w-0 w-full max-w-full bg-bg-base">
-      <div className="hero-glow pb-8">
+      <div className="hero-glow pb-8" onClick={onHeaderClick}>
         <Header />
         <LibraryToolbar activeTab={activeTab} onActiveTabChange={onActiveTabChange} onNewPreset={onNewPreset} onImport={onImport} />
         <LibraryFiltersRow
@@ -112,7 +114,7 @@ export function LibraryShell({
         )}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8" onClick={onHeaderClick}>
         {stickyHeader}
       </div>
 

@@ -79,7 +79,6 @@ import {
   PRESET_TABLE_HEADER_EXPLORE,
   PRESET_TABLE_HEADER_SETS,
   PRESET_TABLE_MIN_WIDTH_CLASS,
-  PRESET_TABLE_OUTPUT_CELL_OFFSET,
   PRESET_TABLE_STATUS_HEADER_CELL,
   PRESET_TABLE_ZONES_CELL_LIBRARY,
 } from '@/components/library/presetTableLayout'
@@ -1879,7 +1878,6 @@ export function Styleguide() {
                       <span>Name</span>
                     </div>
                     <span aria-hidden="true" />
-                    <span aria-hidden="true" className={PRESET_TABLE_OUTPUT_CELL_OFFSET} />
                     <span aria-hidden="true" className={PRESET_TABLE_ZONES_CELL_LIBRARY} />
                     <span>Last updated</span>
                     <span className={PRESET_TABLE_STATUS_HEADER_CELL}>Status</span>
