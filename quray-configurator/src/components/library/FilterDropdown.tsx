@@ -118,14 +118,20 @@ export function FilterDropdownPanel({
       role="menu"
       className={`min-w-[180px] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg ${className}`.trim()}
     >
-      {options.map((option) => (
-        <FilterOptionRow
-          key={option.id}
-          option={option}
-          selected={selected.includes(option.id)}
-          onToggle={() => toggleOption(option.id)}
-        />
-      ))}
+      {options.length === 0 ? (
+        <p className="px-4 py-3 text-xs font-light leading-relaxed text-text-muted">
+          Assign devices to your presets and they'll appear here.
+        </p>
+      ) : (
+        options.map((option) => (
+          <FilterOptionRow
+            key={option.id}
+            option={option}
+            selected={selected.includes(option.id)}
+            onToggle={() => toggleOption(option.id)}
+          />
+        ))
+      )}
     </div>
   )
 }

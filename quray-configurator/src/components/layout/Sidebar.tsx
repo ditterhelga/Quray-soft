@@ -11,6 +11,7 @@ import {
   CaretRight,
   Check,
   MusicNote,
+  PencilSimple,
   Plus,
   SquaresFour,
   WarningCircle,
@@ -797,27 +798,39 @@ export function Sidebar({
             </div>
 
             <div className="px-6 pb-5 pt-4">
-              {editingName ? (
-                <input
-                  autoFocus
-                  value={presetName}
-                  onChange={(e) => setPresetName(e.target.value)}
-                  onBlur={() => setEditingName(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') setEditingName(false)
-                    if (e.key === 'Escape') setEditingName(false)
-                  }}
-                  className="min-w-0 flex-1 bg-transparent text-lg font-light text-text-primary outline-none"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditingName(true)}
-                  className="min-w-0 flex-1 cursor-text truncate text-left text-lg font-light text-text-primary transition-opacity hover:opacity-80"
-                >
-                  {presetName}
-                </button>
-              )}
+              <div className="group flex items-center gap-2">
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                    onBlur={() => setEditingName(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setEditingName(false)
+                      if (e.key === 'Escape') setEditingName(false)
+                    }}
+                    className="min-w-0 flex-1 bg-transparent text-lg font-light text-text-primary outline-none"
+                  />
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setEditingName(true)}
+                      className="min-w-0 flex-1 cursor-text truncate text-left text-lg font-light text-text-primary"
+                    >
+                      {presetName}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingName(true)}
+                      aria-label="Rename preset"
+                      className="shrink-0 opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 text-text-muted hover:text-text-primary"
+                    >
+                      <PencilSimple size={14} weight="regular" aria-hidden="true" />
+                    </button>
+                  </>
+                )}
+              </div>
 
               <div className="mt-3 flex items-center gap-1.5 text-xs text-text-muted">
                 {mockSyncStatus === 'synced' ? (

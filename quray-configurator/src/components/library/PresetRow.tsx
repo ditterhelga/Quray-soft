@@ -164,8 +164,6 @@ function PresetNameColumn({
   dragHandleAttributes?: DraggableAttributes
   dragHandleListeners?: SyntheticListenerMap
 }) {
-  const moodTags = preset.tags?.filter((t) => t !== 'Factory') ?? []
-
   const nameBlock = isRenaming ? (
     <PresetNameEditor
       initialName={preset.name}
@@ -179,9 +177,13 @@ function PresetNameColumn({
   const subLine =
     variant === 'explore' ? (
       <TagNames tags={preset.tags ?? []} />
-    ) : (
+    ) : preset.devices && preset.devices.length > 0 ? (
       <DeviceNames devices={preset.devices} />
-    )
+    ) : preset.tags && preset.tags.length > 0 ? (
+      <TagNames tags={preset.tags.filter((t) => t !== 'Factory')} />
+    ) : preset.outputTypes && preset.outputTypes.length > 0 ? (
+      <TagNames tags={preset.outputTypes} />
+    ) : null
 
   if (bulkSelectionEnabled && bulkActive) {
     return (
@@ -197,11 +199,6 @@ function PresetNameColumn({
         />
         <div className="min-w-0">
           {nameBlock}
-          {variant !== 'explore' && moodTags.length > 0 && (
-          <p className="mt-1 truncate text-sm font-light text-text-muted">
-            {moodTags.join(' · ')}
-          </p>
-          )}
           {subLine}
         </div>
       </div>
@@ -223,11 +220,6 @@ function PresetNameColumn({
         </button>
         <div className="min-w-0">
           {nameBlock}
-          {variant !== 'explore' && moodTags.length > 0 && (
-          <p className="mt-1 truncate text-sm font-light text-text-muted">
-            {moodTags.join(' · ')}
-          </p>
-          )}
           {subLine}
         </div>
       </div>
@@ -238,11 +230,6 @@ function PresetNameColumn({
     return (
       <>
         {nameBlock}
-        {variant !== 'explore' && moodTags.length > 0 && (
-          <p className="mt-1 truncate text-sm font-light text-text-muted">
-            {moodTags.join(' · ')}
-          </p>
-        )}
         {subLine}
       </>
     )
@@ -261,11 +248,6 @@ function PresetNameColumn({
       />
       <div className="min-w-0">
         {nameBlock}
-        {variant !== 'explore' && moodTags.length > 0 && (
-          <p className="mt-1 truncate text-sm font-light text-text-muted">
-            {moodTags.join(' · ')}
-          </p>
-        )}
         {subLine}
       </div>
     </div>
@@ -524,9 +506,11 @@ export function PresetRow({
                 : ''
             }`}
           >
-            {preset.outputTypes.map((outputType) => (
-              <OutputChip key={outputType} label={formatOutputLabel(outputType)} />
-            ))}
+            {preset.outputTypes.map((outputType) => {
+              const label = formatOutputLabel(outputType)
+              if (!label) return null
+              return <OutputChip key={outputType} label={label} />
+            })}
           </div>
         )}
 

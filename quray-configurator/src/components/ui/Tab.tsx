@@ -31,5 +31,5 @@ export function tabClassName(active: boolean) {
 }
 
 export function tabGroupClassName() {
-  return 'flex h-12 min-w-0 items-center gap-6'
+  return 'flex h-12 min-w-0 items-center gap-8'
 }

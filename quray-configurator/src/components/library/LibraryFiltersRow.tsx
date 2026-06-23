@@ -7,6 +7,7 @@ import {
   FILTER_OPTIONS,
   LIBRARY_FILTER_KEYS,
   type FilterKey,
+  type FilterOption,
   type LibraryFilters,
 } from '@/components/library/filterOptions'
 import { FavouritesToggleButton } from '@/components/ui/FavouritesToggleButton'
@@ -23,6 +24,7 @@ type LibraryFiltersRowProps = {
   onSearchQueryChange: (query: string) => void
   onlyFavourites: boolean
   onOnlyFavouritesChange: (value: boolean) => void
+  deviceFilterOptions?: FilterOption[]
 }
 
 export function libraryFiltersRowClassName() {
@@ -40,6 +42,7 @@ export function LibraryFiltersRow({
   onSearchQueryChange,
   onlyFavourites,
   onOnlyFavouritesChange,
+  deviceFilterOptions,
 }: LibraryFiltersRowProps) {
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
 
@@ -50,7 +53,7 @@ export function LibraryFiltersRow({
         <FilterDropdown
           key={key}
           label={FILTER_LABELS[key]}
-          options={FILTER_OPTIONS[key]}
+          options={key === 'device' && deviceFilterOptions !== undefined ? deviceFilterOptions : FILTER_OPTIONS[key]}
           selected={filters[key]}
           onSelectedChange={(selected) => onFilterChange(key, selected)}
           isOpen={openFilter === key && openFilterAnchor === 'button'}

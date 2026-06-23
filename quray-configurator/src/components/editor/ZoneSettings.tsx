@@ -13,6 +13,7 @@ import {
 import { createPortal } from 'react-dom'
 import { ZoneMappingCard } from '@/components/editor/ZoneMappingCard'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { Divider } from '@/components/ui/Divider'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import { createMappingId } from '@/components/editor/zoneMappings'
@@ -509,7 +510,9 @@ export function ZoneSettings({
         </div>
       </ZonePanelSection>
 
-      <div className={`${zonePanelDividerClassName()} mt-5`} />
+      <div className="mt-5">
+        <Divider />
+      </div>
 
       <ZonePanelSection className="flex flex-1 flex-col px-5 py-4">
         <h3 className={`${zoneSectionLabelClassName()} mt-2 mb-4`}>MAPPINGS</h3>

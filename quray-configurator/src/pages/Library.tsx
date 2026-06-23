@@ -12,6 +12,7 @@ import type { FilterAnchor } from '@/components/library/FilterDropdown'
 import {
   EMPTY_FILTERS,
   type FilterKey,
+  type FilterOption,
   type LibraryFilters,
 } from '@/components/library/filterOptions'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -76,6 +77,20 @@ export function Library({ mode = 'full' }: LibraryProps) {
     favourites, setFavourites,
   } = usePresetsContext()
   const presets = mode === 'fresh' ? freshPresets : fullPresets
+  const deviceFilterOptions = useMemo<FilterOption[]>(() => {
+    const seen = new Set<string>()
+    const options: FilterOption[] = []
+    for (const preset of presets) {
+      for (const device of preset.devices ?? []) {
+        const id = device.toLowerCase().replace(/\s+/g, '-')
+        if (!seen.has(id)) {
+          seen.add(id)
+          options.push({ id, label: device })
+        }
+      }
+    }
+    return options
+  }, [presets])
   const setPresets = mode === 'fresh' ? setFreshPresets : setFullPresets
   const sets = mode === 'fresh' ? freshSets : fullSets
   const setSets = mode === 'fresh' ? setFreshSets : setFullSets
@@ -960,6 +975,7 @@ export function Library({ mode = 'full' }: LibraryProps) {
           onlyFavourites={onlyFavourites}
           onOnlyFavouritesChange={setOnlyFavourites}
           onClearAllFilters={handleClearAllFilters}
+          deviceFilterOptions={deviceFilterOptions}
           onNewPreset={() => navigate('/editor/preset-empty')}
           onImport={() => setToast({ message: 'Import is coming soon.' })}
           stickyHeader={listHeader}

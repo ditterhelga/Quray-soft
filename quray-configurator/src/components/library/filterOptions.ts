@@ -54,6 +54,7 @@ export const FILTER_OPTIONS: Record<FilterKey, FilterOption[]> = {
     { id: 'note', label: 'Note' },
     { id: 'cc', label: 'CC' },
     { id: 'cv', label: 'CV' },
+    { id: 'cv-note', label: 'CV Note' },
   ],
   device: [
     { id: 'moog-subsequent-37', label: 'Moog Subsequent 37' },

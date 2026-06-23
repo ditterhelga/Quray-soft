@@ -90,29 +90,30 @@ export function AddPresetPickerModal({
       searchPlaceholder="Search presets…"
       footer={
         <>
-          <span className="text-sm font-light text-text-muted">
-            {selectedCount} selected
-          </span>
           <button
             type="button"
-            onClick={handleAdd}
-            disabled={selectedCount === 0}
-            className={`${confirmDialogConfirmClassName()} disabled:cursor-not-allowed disabled:opacity-50`}
+            onClick={handleCreatePreset}
+            className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-light text-accent transition-colors duration-[120ms] hover:opacity-80"
           >
-            Add
+            <Plus size={14} weight="regular" className="shrink-0" aria-hidden="true" />
+            New preset
           </button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-light text-text-muted">
+              {selectedCount > 0 ? `${selectedCount} selected` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={selectedCount === 0}
+              className={`${confirmDialogConfirmClassName()} disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              Add
+            </button>
+          </div>
         </>
       }
     >
-      <button
-        type="button"
-        onClick={handleCreatePreset}
-        className={commandPaletteCreateActionClassName()}
-      >
-        <Plus size={16} weight="regular" className="shrink-0" aria-hidden="true" />
-        Create new preset
-      </button>
-
       {filteredPresets.length === 0 ? (
         <p className="px-4 py-6 text-sm font-light text-text-muted">
           No presets match your search

@@ -338,7 +338,7 @@ function SetExpandedPresets({
         </div>
       </SortableContext>
 
-      <div className="py-4">
+      <div className="py-4 pl-8">
         <button
           type="button"
           onClick={(event) => {

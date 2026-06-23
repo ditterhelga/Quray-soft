@@ -1,13 +1,11 @@
 import {
   ArrowClockwise,
   ArrowCounterClockwise,
-  DotsThree,
   Plus,
   UploadSimple,
 } from '@phosphor-icons/react'
-import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react'
-import { useLocation, useParams, useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
 import { FanCanvas } from '@/components/editor/FanCanvas'
 import { ZoneSettings } from '@/components/editor/ZoneSettings'
 import { createDefaultMapping } from '@/components/editor/zoneMappings'
@@ -29,154 +27,6 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function EditorPresetMenuDivider() {
-  return <div className="my-1 border-t border-border-subtle" role="separator" />
-}
-
-const EDITOR_PRESET_MENU_WIDTH_PX = 220
-
-function EditorPresetKebabMenu({
-  outlinedButtonClassName,
-  onRename,
-  onDelete,
-}: {
-  outlinedButtonClassName: string
-  onRename: () => void
-  onDelete: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
-  const containerRef = useRef<HTMLDivElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const menuId = useId()
-
-  useEffect(() => {
-    if (!open) return
-
-    function updatePosition() {
-      const anchor = containerRef.current
-      if (!anchor) return
-
-      const rect = anchor.getBoundingClientRect()
-      setMenuStyle({
-        position: 'fixed',
-        top: rect.bottom + 6,
-        left: Math.max(8, rect.right - EDITOR_PRESET_MENU_WIDTH_PX),
-        zIndex: 50,
-      })
-    }
-
-    updatePosition()
-    window.addEventListener('scroll', updatePosition, true)
-    window.addEventListener('resize', updatePosition)
-
-    return () => {
-      window.removeEventListener('scroll', updatePosition, true)
-      window.removeEventListener('resize', updatePosition)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node
-
-      if (containerRef.current?.contains(target)) {
-        return
-      }
-
-      if (menuRef.current?.contains(target)) {
-        return
-      }
-
-      setOpen(false)
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open])
-
-  function handleItemClick(action?: () => void) {
-    setOpen(false)
-    action?.()
-  }
-
-  return (
-    <div ref={containerRef} className="relative shrink-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((value) => !value)}
-        className={outlinedButtonClassName}
-        aria-label="Preset menu"
-      >
-        <DotsThree size={16} weight="regular" className="shrink-0" aria-hidden="true" />
-      </button>
-
-      {open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            id={menuId}
-            role="menu"
-            style={menuStyle}
-            className="min-w-[var(--width-dropdown)] animate-[dropdown-enter_150ms_ease-out_both] rounded-lg border border-border-subtle bg-bg-active py-1 shadow-lg"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleItemClick(onRename)}
-              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
-            >
-              Rename preset
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleItemClick(() => console.log('Duplicate preset'))}
-              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
-            >
-              Duplicate preset
-            </button>
-            <EditorPresetMenuDivider />
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleItemClick(() => console.log('Export preset'))}
-              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-text-primary transition-colors duration-[120ms] hover:bg-bg-hover"
-            >
-              Export preset
-            </button>
-            <EditorPresetMenuDivider />
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleItemClick(onDelete)}
-              className="flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm font-light text-status-error transition-colors duration-[120ms] hover:bg-bg-hover"
-            >
-              Delete preset
-            </button>
-          </div>,
-          document.body,
-        )}
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Editor
 // ---------------------------------------------------------------------------
@@ -185,7 +35,6 @@ export function Editor() {
   const { presetId } = useParams<{ presetId: string }>()
   const { sendPresetToDevice } = useDeviceContext()
   const location = useLocation()
-  const navigate = useNavigate()
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
     zones,
@@ -204,7 +53,6 @@ export function Editor() {
     redo,
     canUndo,
     canRedo,
-    triggerPresetRename,
     setPresetName,
   } = useEditorZones()
   const [drawMode, setDrawMode] = useState(false)
@@ -311,14 +159,6 @@ export function Editor() {
                   <UploadSimple size={14} weight="regular" className="shrink-0" aria-hidden="true" />
                   Send to Quray
                 </button>
-                <EditorPresetKebabMenu
-                  outlinedButtonClassName={outlinedButtonClassName}
-                  onRename={triggerPresetRename}
-                  onDelete={() => {
-                    navigate('/')
-                    setToast({ message: 'Preset deleted.' })
-                  }}
-                />
               </div>
 
               <div className="ml-auto flex items-center gap-2">

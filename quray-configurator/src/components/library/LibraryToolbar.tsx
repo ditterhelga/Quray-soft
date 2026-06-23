@@ -20,7 +20,7 @@ export function libraryToolbarRowClassName() {
 }
 
 export function libraryToolbarActionsClassName() {
-  return 'flex h-12 shrink-0 items-center gap-6'
+  return 'flex h-12 shrink-0 items-center gap-8'
 }
 
 export function libraryToolbarImportClassName() {

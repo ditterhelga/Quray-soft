@@ -14,7 +14,8 @@ function AppShellContent() {
   const { isCollapsed, onCollapsedChange } = useSidebar()
   const { isOpen, openDeviceSettings, closeDeviceSettings } = useDeviceSettings()
   const location = useLocation()
-  const isLibraryHome = location.pathname === '/'
+  const isLibraryPage =
+    location.pathname === '/' || location.pathname === '/full'
 
   return (
     <>
@@ -25,7 +26,7 @@ function AppShellContent() {
           onOpenDeviceSettings={openDeviceSettings}
         />
         <div className="flex min-h-0 flex-1 flex-col bg-bg-base">
-          {!isLibraryHome && <Header />}
+          {!isLibraryPage && <Header />}
           <main className="min-h-0 flex-1 overflow-y-auto bg-bg-base">
             <Outlet />
           </main>

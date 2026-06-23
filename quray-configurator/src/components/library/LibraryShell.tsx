@@ -13,7 +13,7 @@ import {
 } from '@/components/library/filterOptions'
 import { Header } from '@/components/layout/Header'
 import type { FilterAnchor } from '@/components/library/FilterDropdown'
-import type { FilterKey, LibraryFilters } from '@/components/library/filterOptions'
+import type { FilterKey, FilterOption, LibraryFilters } from '@/components/library/filterOptions'
 
 type LibraryShellProps = {
   /** Presets/Sets toggle and table column headers. */
@@ -36,6 +36,7 @@ type LibraryShellProps = {
   onClearAllFilters: () => void
   onNewPreset?: () => void
   onImport?: () => void
+  deviceFilterOptions?: FilterOption[]
 }
 
 /**
@@ -71,6 +72,7 @@ export function LibraryShell({
   onClearAllFilters,
   onNewPreset,
   onImport,
+  deviceFilterOptions,
 }: LibraryShellProps) {
   const filterKeys = activeTab === 'explore' ? EXPLORE_FILTER_KEYS : LIBRARY_FILTER_KEYS
   const hasFilterPills = hasActiveFilters(filters, onlyFavourites, filterKeys)
@@ -91,6 +93,7 @@ export function LibraryShell({
           onSearchQueryChange={onSearchQueryChange}
           onlyFavourites={onlyFavourites}
           onOnlyFavouritesChange={onOnlyFavouritesChange}
+          deviceFilterOptions={deviceFilterOptions}
         />
         {hasFilterPills && (
           <div className="mt-5">

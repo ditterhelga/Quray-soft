@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   ArrowSquareOut,
   CaretDown,
@@ -39,8 +39,17 @@ import { DeviceSlotActions } from '@/components/device/DeviceSlotActions'
 import { BulkActionBar } from '@/components/library/BulkActionBar'
 import { AddPresetPickerModal } from '@/components/library/AddPresetPickerModal'
 import { SetPickerModal } from '@/components/library/SetPickerModal'
-import { PresetKebabMenu } from '@/components/library/PresetKebabMenu'
-import { SetKebabMenu } from '@/components/library/SetKebabMenu'
+import {
+  PresetKebabMenu,
+  PresetKebabMenuPanel,
+  presetKebabMenuPanelSurfaceClassName,
+  type PresetKebabMenuVariant,
+} from '@/components/library/PresetKebabMenu'
+import {
+  SetKebabMenu,
+  SetKebabMenuPanel,
+  setKebabMenuPanelSurfaceClassName,
+} from '@/components/library/SetKebabMenu'
 import { SetRow } from '@/components/library/SetRow'
 import {
   presetListTableHeaderClassName,
@@ -503,30 +512,32 @@ function StyleguideZoneMappingCardDemo() {
   const [splitOpen, setSplitOpen] = useState(true)
 
   return (
-    <div className="max-w-sm space-y-3">
-      <ZoneMappingCard
-        mapping={mapping}
-        isOpen={isOpen}
-        onToggle={() => setIsOpen((value) => !value)}
-        onUpdate={(patch) => setMapping((current) => ({ ...current, ...patch }))}
-        onTypeChange={(type) =>
-          setMapping((current) => applyMappingTypeChange(current, type))
-        }
-        onDelete={() => setIsOpen(false)}
-      />
-      <ZoneMappingCard
-        mapping={splitMapping}
-        isOpen={splitOpen}
-        onToggle={() => setSplitOpen((v) => !v)}
-        onUpdate={(patch) => setSplitMapping((current) => ({ ...current, ...patch }))}
-        onTypeChange={(type) =>
-          setSplitMapping((current) => applyMappingTypeChange(current, type))
-        }
-        onDelete={() => setSplitOpen(false)}
-        presetScale="Natural Minor"
-        presetRoot="A"
-      />
-    </div>
+    <EditorZonesProvider>
+      <div className="max-w-sm space-y-3">
+        <ZoneMappingCard
+          mapping={mapping}
+          isOpen={isOpen}
+          onToggle={() => setIsOpen((value) => !value)}
+          onUpdate={(patch) => setMapping((current) => ({ ...current, ...patch }))}
+          onTypeChange={(type) =>
+            setMapping((current) => applyMappingTypeChange(current, type))
+          }
+          onDelete={() => setIsOpen(false)}
+        />
+        <ZoneMappingCard
+          mapping={splitMapping}
+          isOpen={splitOpen}
+          onToggle={() => setSplitOpen((v) => !v)}
+          onUpdate={(patch) => setSplitMapping((current) => ({ ...current, ...patch }))}
+          onTypeChange={(type) =>
+            setSplitMapping((current) => applyMappingTypeChange(current, type))
+          }
+          onDelete={() => setSplitOpen(false)}
+          presetScale="Natural Minor"
+          presetRoot="A"
+        />
+      </div>
+    </EditorZonesProvider>
   )
 }
 
@@ -933,6 +944,55 @@ function StyleguideFilterDropdownPanel({
         />
       </div>
       <p className="mt-3 text-xs text-text-muted">Rest · hover · selected</p>
+    </div>
+  )
+}
+
+function StyleguidePresetKebabMenuPanel({
+  title,
+  presetId,
+  variant = 'library',
+}: {
+  title: string
+  presetId: string
+  variant?: PresetKebabMenuVariant
+}) {
+  const menuId = useId()
+
+  return (
+    <div>
+      <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+        {title}
+      </p>
+      <PresetKebabMenuPanel
+        menuId={menuId}
+        presetId={presetId}
+        variant={variant}
+        className={presetKebabMenuPanelSurfaceClassName()}
+      />
+    </div>
+  )
+}
+
+function StyleguideSetKebabMenuPanel({
+  title,
+  setId,
+}: {
+  title: string
+  setId: string
+}) {
+  const menuId = useId()
+
+  return (
+    <div>
+      <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
+        {title}
+      </p>
+      <SetKebabMenuPanel
+        menuId={menuId}
+        setId={setId}
+        className={setKebabMenuPanelSurfaceClassName()}
+      />
     </div>
   )
 }
@@ -1703,25 +1763,28 @@ export function Styleguide() {
                 </div>
               </div>
 
-              <div>
-                <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
-                  Explore kebab menu
-                </p>
-                <div className="inline-flex items-center rounded-lg border border-border bg-bg-active px-4 py-3">
-                  <PresetKebabMenu presetId="styleguide-explore" variant="explore" forceOpen />
-                </div>
+              <div className="flex flex-wrap items-start gap-10">
+                <StyleguidePresetKebabMenuPanel
+                  title="Explore kebab menu"
+                  presetId="styleguide-explore"
+                  variant="explore"
+                />
+                <StyleguidePresetKebabMenuPanel
+                  title="Kebab menu"
+                  presetId="styleguide"
+                />
               </div>
 
               <div>
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
-                  Kebab menu
+                  Interactive
                 </p>
                 <div className="inline-flex items-center rounded-lg border border-border bg-bg-active px-4 py-3">
-                  <PresetKebabMenu presetId="styleguide" forceOpen />
+                  <PresetKebabMenu presetId="styleguide" />
                 </div>
                 <p className="mt-4 text-sm font-light text-text-muted">
-                  Portal-anchored dropdown · opens below the kebab button · flips upward near
-                  viewport bottom · same positioning as Library rows.
+                  Click kebab to open · portal-anchored dropdown · flips upward near viewport
+                  bottom · same positioning as Library rows.
                 </p>
               </div>
 
@@ -1889,13 +1952,20 @@ export function Styleguide() {
                 </StyleguideWidePreview>
               </div>
 
+              <div className="flex flex-wrap items-start gap-10">
+                <StyleguideSetKebabMenuPanel title="Kebab menu" setId="styleguide-set" />
+              </div>
+
               <div>
                 <p className="mb-4 text-xs font-light uppercase tracking-wide text-text-muted">
-                  Kebab menu
+                  Interactive
                 </p>
                 <div className="inline-flex items-center rounded-lg border border-border bg-bg-active px-4 py-3">
-                  <SetKebabMenu setId="styleguide-set" forceOpen />
+                  <SetKebabMenu setId="styleguide-set" />
                 </div>
+                <p className="mt-4 text-sm font-light text-text-muted">
+                  Click kebab to open · portal-anchored dropdown · flips upward near viewport bottom.
+                </p>
               </div>
             </div>
             <p className="mt-6 text-sm font-light text-text-muted">

@@ -94,46 +94,54 @@ type EditorZonesContextValue = {
 
 const EditorZonesContext = createContext<EditorZonesContextValue | null>(null)
 
+function deriveZoneName(primaryMapping: ZoneMapping, mappingCount: number): string {
+  const extra = mappingCount > 1 ? ` +${mappingCount - 1}` : ''
+  let base: string
+  switch (primaryMapping.type) {
+    case 'Note': {
+      const note = `${primaryMapping.rootNote ?? 'C'}${primaryMapping.octave ?? 4}`
+      base = primaryMapping.chordMode === 'chord'
+        ? `${note} ${primaryMapping.chordType ?? 'Major'}`
+        : note
+      break
+    }
+    case 'CC': {
+      if (primaryMapping.ccInputMode === 'device' && primaryMapping.ccParamId) {
+        const param = findMidiParameter(primaryMapping.ccDeviceId, primaryMapping.ccParamId)
+        if (param) { base = param.name; break }
+      }
+      base = `CC ${primaryMapping.cc ?? 74}`
+      break
+    }
+    case 'CV': {
+      const short: Record<string, string> = {
+        Pitch: 'Pitch', Continuous: 'Cont', Gate: 'Gate', Trigger: 'Trig',
+      }
+      base = `CV${primaryMapping.port ?? 1} ${short[primaryMapping.cvMode ?? 'Pitch'] ?? 'Pitch'}`
+      break
+    }
+    case 'CV note': {
+      base = `CV${primaryMapping.port ?? 1} ${primaryMapping.rootNote ?? 'C'}${primaryMapping.octave ?? 4}`
+      break
+    }
+    default:
+      base = 'Zone'
+  }
+  return `${base}${extra}`
+}
+
 function patchZoneMappings(
   zone: EditorZone,
   updater: (mappings: ZoneMapping[]) => ZoneMapping[],
 ): EditorZone {
   const mappings = updater(zone.mappings)
+  const primaryMapping = mappings[0]
+  const autoName = primaryMapping ? deriveZoneName(primaryMapping, mappings.length) : null
   return {
     ...zone,
     mappings,
     type: deriveZoneTypeFromMappings(mappings),
-  }
-}
-
-function deriveZoneName(zone: EditorZone, mapping: ZoneMapping): string | null {
-  // Only auto-rename if name matches default pattern "Zone N"
-  if (!/^Zone \d+$/.test(zone.name)) return null
-
-  switch (mapping.type) {
-    case 'Note': {
-      const note = `${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
-      if (mapping.chordMode === 'chord') return `${note} ${mapping.chordType ?? 'Major'}`
-      return note
-    }
-    case 'CC': {
-      if (mapping.ccInputMode === 'device' && mapping.ccParamId) {
-        const param = findMidiParameter(mapping.ccDeviceId, mapping.ccParamId)
-        if (param) return param.name
-      }
-      return `CC ${mapping.cc ?? 0}`
-    }
-    case 'CV': {
-      const port = `CV${mapping.port ?? 1}`
-      const mode = mapping.cvMode ?? 'Pitch'
-      const short: Record<string, string> = {
-        Pitch: 'Pitch', Continuous: 'Cont', Gate: 'Gate', Trigger: 'Trig'
-      }
-      return `${port} ${short[mode] ?? mode}`
-    }
-    case 'CV note': {
-      return `CV${mapping.port ?? 1} ${mapping.rootNote ?? 'C'}${mapping.octave ?? 4}`
-    }
+    ...(autoName ? { name: autoName } : {}),
   }
 }
 
@@ -255,7 +263,7 @@ export function EditorZonesProvider({
         mapping.id === mappingId ? { ...mapping, ...patch } : mapping,
       )
       const primaryMapping = updatedMappings[0]
-      const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+      const autoName = primaryMapping ? deriveZoneName(primaryMapping, updatedMappings.length) : null
       return {
         ...zone,
         mappings: updatedMappings,
@@ -299,7 +307,7 @@ export function EditorZonesProvider({
         mapping.id === mappingId ? applyMappingTypeChange(mapping, type) : mapping,
       )
       const primaryMapping = updatedMappings[0]
-      const autoName = primaryMapping ? deriveZoneName(zone, primaryMapping) : null
+      const autoName = primaryMapping ? deriveZoneName(primaryMapping, updatedMappings.length) : null
 
       return {
         ...zone,
