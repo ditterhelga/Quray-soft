@@ -20,10 +20,6 @@ import { createMappingId } from '@/components/editor/zoneMappings'
 import { ZONE_PALETTE } from '@/constants/zonePalette'
 import type { EditorZone } from '@/types'
 
-function zonePanelDividerClassName() {
-  return 'border-t border-border-panel'
-}
-
 function zoneSectionLabelClassName() {
   return 'mb-3 text-xs uppercase tracking-wide text-text-muted'
 }

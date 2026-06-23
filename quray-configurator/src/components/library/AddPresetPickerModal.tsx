@@ -2,7 +2,6 @@ import { Plus } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   CommandPaletteModal,
-  commandPaletteCreateActionClassName,
   commandPaletteItemClassName,
 } from '@/components/library/CommandPaletteModal'
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
