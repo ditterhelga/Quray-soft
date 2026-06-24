@@ -14,6 +14,7 @@ import {
   PencilSimple,
   Plus,
   SquaresFour,
+  SlidersHorizontal,
   WarningCircle,
 } from '@phosphor-icons/react'
 import { zoneFieldCardClassName } from '@/components/editor/ZoneMappingCard'
@@ -764,14 +765,26 @@ export function Sidebar({
       {isEditor ? (
         isCollapsed ? (
           <div className="flex min-h-0 flex-1 flex-col items-center gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleSaveAndBack}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors duration-[120ms] hover:bg-bg-active hover:text-text-primary"
-              aria-label="Library"
-            >
-              <ArrowLeft size={20} className="shrink-0" />
-            </button>
+            <Tooltip content="Back to library" side="right">
+              <button
+                type="button"
+                onClick={handleSaveAndBack}
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors duration-[120ms] hover:bg-bg-active hover:text-text-primary"
+                aria-label="Library"
+              >
+                <ArrowLeft size={20} className="shrink-0" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Preset settings" side="right">
+              <button
+                type="button"
+                onClick={() => onCollapsedChange(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+                aria-label="Open preset settings"
+              >
+                <SlidersHorizontal size={18} weight="regular" aria-hidden="true" />
+              </button>
+            </Tooltip>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
@@ -1073,6 +1086,7 @@ export function Sidebar({
       <AccountRow
         isCollapsed={isCollapsed}
         onOpenDeviceSettings={onOpenDeviceSettings}
+        onCollapsedChange={onCollapsedChange}
       />
     </aside>
   )

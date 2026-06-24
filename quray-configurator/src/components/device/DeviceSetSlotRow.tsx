@@ -105,7 +105,7 @@ export function DeviceSetSlotRow({
   return (
     <div className={setRowUnitClassName(isExpanded)}>
       <article
-        className={deviceSlotRowClassName(isDragPlaceholder)}
+        className={`${deviceSlotRowClassName(isDragPlaceholder)} relative overflow-hidden`}
         onClick={handleRowClick}
         onKeyDown={handleRowKeyDown}
         role="button"
@@ -113,6 +113,10 @@ export function DeviceSetSlotRow({
         aria-expanded={isExpanded}
         aria-label={`${isExpanded ? 'Collapse' : 'Expand'} set ${set.name}`}
       >
+        <span
+          className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent opacity-40"
+          aria-hidden="true"
+        />
         <div className={DEVICE_TABLE_GRID}>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center">

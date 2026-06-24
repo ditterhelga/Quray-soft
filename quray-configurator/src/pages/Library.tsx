@@ -852,6 +852,11 @@ export function Library({ mode = 'full' }: LibraryProps) {
 
     if (actionId === 'send-to-quray') {
       sendSetToDevice(setId)
+      setToast({
+        message: 'Added to your Quray.',
+        actionLabel: 'View Device page',
+        onAction: () => navigate('/device'),
+      })
       return
     }
 

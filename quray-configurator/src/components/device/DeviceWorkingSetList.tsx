@@ -22,7 +22,7 @@ import { DevicePresetSlotRow } from '@/components/device/DevicePresetSlotRow'
 import { DeviceSectionHeader } from '@/components/device/DeviceSectionHeader'
 import { DeviceSetSlotRow } from '@/components/device/DeviceSetSlotRow'
 import { deviceSlotDragOverlayClassName, deviceSlotListRowsClassName } from '@/components/device/deviceSlotLayout'
-import { DEVICE_TABLE_GRID } from '@/components/device/deviceTableLayout'
+import { DEVICE_TABLE_GRID, DEVICE_TABLE_STATUS_CELL } from '@/components/device/deviceTableLayout'
 import {
   libraryListBodyClassName,
 } from '@/components/library/libraryLayout'
@@ -301,21 +301,26 @@ export function DeviceWorkingSetList({
             />
           </div>
         )}
-        <div className={`${DEVICE_TABLE_GRID} pr-6 text-sm font-light text-text-muted`}>
-          <div className="flex items-center pl-4">
-            <SelectionCheckbox
-              checked={slots.length > 0 && selectedIds.size === slots.length}
-              compact
-              onToggle={selectedIds.size === slots.length ? onClearSelection : onSelectAll}
-              ariaLabel={selectedIds.size === slots.length ? 'Deselect all' : 'Select all'}
-              className="shrink-0 self-center"
-            />
+        <div className={`${DEVICE_TABLE_GRID} pr-14 text-sm font-light text-text-muted`}>
+          <div className="flex items-center pl-8">
+            <div className="flex shrink-0 items-center pl-4">
+              <SelectionCheckbox
+                checked={slots.length > 0 && selectedIds.size === slots.length}
+                compact
+                onToggle={selectedIds.size === slots.length ? onClearSelection : onSelectAll}
+                ariaLabel={selectedIds.size === slots.length ? 'Deselect all' : 'Select all'}
+                className="shrink-0"
+              />
+            </div>
             <div className="ml-3 w-4 shrink-0" aria-hidden="true" />
-            <div className="ml-3 w-10 shrink-0" aria-hidden="true" />
             <span className="ml-3">Name</span>
           </div>
-          <div className="flex items-center justify-end gap-6">
-            <span>Status</span>
+          <div className={DEVICE_TABLE_STATUS_CELL}>
+            <span className="relative inline-flex w-[1.875rem] shrink-0 justify-center overflow-visible">
+              <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+                Status
+              </span>
+            </span>
             <div className="w-[4.75rem] shrink-0" aria-hidden="true" />
           </div>
         </div>

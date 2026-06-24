@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   type Dispatch,
@@ -22,6 +23,8 @@ type PresetsContextValue = {
   setFullSets: Dispatch<SetStateAction<LibrarySet[]>>
   favourites: Record<string, boolean>
   setFavourites: Dispatch<SetStateAction<Record<string, boolean>>>
+  recentPresetIds: string[]
+  addRecentPreset: (id: string) => void
 }
 
 const PresetsContext = createContext<PresetsContextValue | null>(null)
@@ -36,6 +39,14 @@ export function PresetsProvider({ children }: { children: ReactNode }) {
     ...Object.fromEntries(FACTORY_PRESETS.map((p) => [p.id, false])),
     ...Object.fromEntries(SETS.map((s) => [s.id, false])),
   }))
+  const [recentPresetIds, setRecentPresetIds] = useState<string[]>([])
+
+  const addRecentPreset = useCallback((id: string) => {
+    setRecentPresetIds((current) => {
+      const filtered = current.filter((existingId) => existingId !== id)
+      return [id, ...filtered].slice(0, 10)
+    })
+  }, [])
 
   return (
     <PresetsContext.Provider
@@ -45,6 +56,8 @@ export function PresetsProvider({ children }: { children: ReactNode }) {
         freshSets, setFreshSets,
         fullSets, setFullSets,
         favourites, setFavourites,
+        recentPresetIds,
+        addRecentPreset,
       }}
     >
       {children}

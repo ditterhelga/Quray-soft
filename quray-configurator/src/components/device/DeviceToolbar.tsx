@@ -65,7 +65,7 @@ export function DeviceToolbar({
               )}
             </span>
           )}
-          <Tooltip content="Applies your arrangement and updates modified presets on the device.">
+          <Tooltip content="Applies your arrangement and updates modified presets on the device." side="bottom-end">
             <span className="inline-flex">
               <button
                 type="button"

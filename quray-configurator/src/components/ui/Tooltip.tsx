@@ -5,6 +5,7 @@ type TooltipProps = {
   children: ReactElement
   disabled?: boolean
   className?: string
+  side?: 'top' | 'right' | 'bottom' | 'bottom-end'
 }
 
 export function tooltipWrapperClassName() {
@@ -24,6 +25,7 @@ export function Tooltip({
   children,
   disabled = false,
   className = tooltipWrapperClassName(),
+  side = 'top',
 }: TooltipProps) {
   const [visible, setVisible] = useState(false)
 
@@ -39,12 +41,45 @@ export function Tooltip({
     >
       {children}
       {visible && (
-        <div role="tooltip" className={tooltipPlacementClassName()}>
-          <div className={tooltipBubbleClassName()}>{content}</div>
-          <span
-            className="h-0 w-0 border-x-[5px] border-x-transparent border-t-[5px] border-t-bg-active"
-            aria-hidden="true"
-          />
+        <div
+          role="tooltip"
+          className={
+            side === 'right'
+              ? 'pointer-events-none absolute left-full top-1/2 z-50 ml-2 flex -translate-y-1/2 flex-row items-center'
+              : side === 'bottom'
+                ? 'pointer-events-none absolute top-full left-1/2 z-50 mt-2 flex -translate-x-1/2 flex-col items-center'
+                : side === 'bottom-end'
+                  ? 'pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-end'
+                  : tooltipPlacementClassName()
+          }
+        >
+          {side === 'right' ? (
+            <>
+              <span
+                className="h-0 w-0 border-y-[5px] border-y-transparent border-r-[5px] border-r-bg-hover"
+                aria-hidden="true"
+              />
+              <div className={tooltipBubbleClassName()}>{content}</div>
+            </>
+          ) : side === 'bottom' || side === 'bottom-end' ? (
+            <>
+              <span
+                className={`h-0 w-0 border-x-[5px] border-x-transparent border-b-[5px] border-b-bg-hover ${
+                  side === 'bottom-end' ? 'mr-4' : ''
+                }`}
+                aria-hidden="true"
+              />
+              <div className={tooltipBubbleClassName()}>{content}</div>
+            </>
+          ) : (
+            <>
+              <div className={tooltipBubbleClassName()}>{content}</div>
+              <span
+                className="h-0 w-0 border-x-[5px] border-x-transparent border-t-[5px] border-t-bg-active"
+                aria-hidden="true"
+              />
+            </>
+          )}
         </div>
       )}
     </div>

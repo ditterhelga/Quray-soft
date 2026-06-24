@@ -14,6 +14,7 @@ import { ZONE_PALETTE } from '@/constants/zonePalette'
 import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { useDeviceContext } from '@/context/DeviceContext'
+import { usePresetsContext } from '@/context/PresetsContext'
 import { editorToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import type { EditorZone, GesturePosition, Preset, PresetZone } from '@/types'
@@ -35,6 +36,7 @@ export function Editor() {
   const { presetId } = useParams<{ presetId: string }>()
   const navigate = useNavigate()
   const { sendPresetToDevice } = useDeviceContext()
+  const { addRecentPreset } = usePresetsContext()
   const location = useLocation()
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
@@ -78,7 +80,10 @@ export function Editor() {
     resetZones(editorPreset?.zones ?? [])
     setSelectedZoneId(null)
     setPresetName(location.state?.presetName ?? editorPreset?.name ?? 'New Preset')
-  }, [presetId, resetZones, setSelectedZoneId])
+    if (presetId && presetId !== 'preset-empty') {
+      addRecentPreset(presetId)
+    }
+  }, [presetId, resetZones, setSelectedZoneId, addRecentPreset])
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {

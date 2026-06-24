@@ -66,10 +66,13 @@ export function Device() {
     if (isFreshMode) {
       const extraPresetIds = new Set(Object.keys(extraPresets))
       setSlots((current) => {
-        const sentSlots = current.filter(
+        const sentPresetSlots = current.filter(
           (slot) => slot.type === 'preset' && extraPresetIds.has(slot.presetId),
         )
-        return [...FRESH_DEVICE_WORKING_SET, ...sentSlots]
+        const sentSetSlots = current.filter(
+          (slot) => slot.type === 'set',
+        )
+        return [...FRESH_DEVICE_WORKING_SET, ...sentPresetSlots, ...sentSetSlots]
       })
       setPresetSync((current) => {
         const extraSync = Object.fromEntries(
@@ -81,24 +84,23 @@ export function Device() {
   }, [isFreshMode, setSlots, setPresetSync, extraPresets])
 
   const setsById = useMemo(
-    () => (isFreshMode ? new Map() : new Map(SETS.map((set) => [set.id, set]))),
-    [isFreshMode],
+    () => new Map(SETS.map((set) => [set.id, set])),
+    [],
   )
   const presetsById = useMemo(() => {
-    const base = isFreshMode
-      ? new Map(FACTORY_PRESETS.map((preset) => [preset.id, preset]))
-      : new Map(PRESETS.map((preset) => [preset.id, preset]))
+    const base = new Map(PRESETS.map((preset) => [preset.id, preset]))
+    FACTORY_PRESETS.forEach((preset) => base.set(preset.id, preset))
     Object.values(extraPresets).forEach((preset) => base.set(preset.id, preset))
     return base
-  }, [isFreshMode, extraPresets])
+  }, [extraPresets])
 
   const allPresets = useMemo(() => {
-    const base = isFreshMode ? [...FACTORY_PRESETS] : [...PRESETS]
+    const base = [...PRESETS, ...FACTORY_PRESETS]
     const extras = Object.values(extraPresets).filter(
       (ep) => !base.some((p) => p.id === ep.id),
     )
     return [...base, ...extras]
-  }, [isFreshMode, extraPresets])
+  }, [extraPresets])
 
   const needsSyncCount = useMemo(
     () => countDeviceSlotsNeedingSync(slots, setsById, presetSync),
@@ -248,7 +250,7 @@ export function Device() {
 
         <DeviceWorkingSetList
           slots={slots}
-          sets={isFreshMode ? [] : SETS}
+          sets={SETS}
           presets={allPresets}
           presetSync={presetSync}
           selectedIds={selectedIds}

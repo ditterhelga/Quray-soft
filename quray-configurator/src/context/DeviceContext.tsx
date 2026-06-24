@@ -8,8 +8,8 @@ import {
   type SetStateAction,
 } from 'react'
 import {
-  DEVICE_PRESET_SYNC,
-  DEVICE_WORKING_SET,
+  FRESH_DEVICE_PRESET_SYNC,
+  FRESH_DEVICE_WORKING_SET,
   type DeviceSlot,
 } from '@/data/deviceWorkingSet'
 import type { Preset } from '@/types'
@@ -29,9 +29,9 @@ type DeviceContextValue = {
 const DeviceContext = createContext<DeviceContextValue | null>(null)
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
-  const [slots, setSlots] = useState<DeviceSlot[]>(() => [...DEVICE_WORKING_SET])
+  const [slots, setSlots] = useState<DeviceSlot[]>(() => [...FRESH_DEVICE_WORKING_SET])
   const [presetSync, setPresetSync] = useState<DevicePresetSyncMap>(
-    () => ({ ...DEVICE_PRESET_SYNC }),
+    () => ({ ...FRESH_DEVICE_PRESET_SYNC }),
   )
   const [extraPresets, setExtraPresets] = useState<Record<string, Preset>>({})
 
