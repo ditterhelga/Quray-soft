@@ -14,7 +14,7 @@ import { ZONE_PALETTE } from '@/constants/zonePalette'
 import { findEditorPreset } from '@/data/editorPresets'
 import { useEditorZones } from '@/context/EditorZonesContext'
 import { useDeviceContext } from '@/context/DeviceContext'
-import { libraryToolbarClassName } from '@/components/library/LibraryToolbar'
+import { editorToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
 import type { EditorZone, GesturePosition } from '@/types'
 
@@ -140,7 +140,7 @@ export function Editor() {
     <div className="flex h-full w-full flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1">
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className={`shrink-0 ${libraryToolbarClassName()}`}>
+          <header className={`shrink-0 ${editorToolbarClassName()}`}>
             <div className="flex h-12 items-center -mx-4">
               <div className="flex items-center gap-2">
                 <button

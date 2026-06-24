@@ -776,8 +776,8 @@ export function Sidebar({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-0">
             <div className="px-6 pt-4">
-              <div className="group relative -ml-4 w-[calc(100%+1.5rem)]">
-                <div className="pointer-events-none absolute bottom-full left-8 mb-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <div className="group relative">
+                <div className="pointer-events-none absolute bottom-full left-0 mb-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                   <div className="whitespace-nowrap rounded-lg bg-bg-hover px-3 py-1.5 text-xs font-light text-text-muted shadow-lg">
                     All changes saved
                   </div>
@@ -786,9 +786,9 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={handleSaveAndBack}
-                  className="relative flex h-12 w-full cursor-pointer items-center rounded-xl border border-transparent bg-transparent pl-6 text-text-secondary transition-colors duration-[120ms] hover:bg-white/[0.04]"
+                  className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-transparent bg-transparent pr-2 text-sm text-text-secondary transition-colors duration-[120ms] hover:text-text-primary"
                 >
-                  <ArrowLeft size={14} className="absolute left-3 shrink-0 opacity-50" />
+                  <ArrowLeft size={16} className="shrink-0" />
                   <span>Library</span>
                 </button>
               </div>

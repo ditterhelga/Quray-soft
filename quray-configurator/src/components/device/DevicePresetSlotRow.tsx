@@ -54,7 +54,7 @@ export function DevicePresetSlotRow({
   return (
     <article className={deviceSlotRowClassName(isDragPlaceholder)}>
       <div className={DEVICE_TABLE_GRID}>
-        <div className="flex min-w-0 items-center">
+        <div className="flex min-w-0 items-start">
           <DeviceSlotLeading
             sequenceIndex={sequenceIndex}
             bulkActive={bulkActive}
@@ -64,9 +64,28 @@ export function DevicePresetSlotRow({
             dragHandleAttributes={dragHandleAttributes}
             dragHandleListeners={dragHandleListeners}
           />
-          <p className={`${presetNameClassName(false)} min-w-0 flex-1 truncate ${deviceSlotLeadingGapClassName()}`}>
-            {preset.name}
-          </p>
+          <div className={`min-w-0 flex-1 ${deviceSlotLeadingGapClassName()}`}>
+            <p className={`${presetNameClassName(false)} truncate`}>
+              {preset.name}
+            </p>
+            {(() => {
+              const isFactory = preset.id.startsWith('factory-')
+              const filteredTags = (preset.tags ?? []).filter((t) => t !== 'Factory')
+              const outputLabels = (preset.outputTypes ?? []).map((t) =>
+                t === 'MIDI Note' ? 'Note' : t === 'MIDI CC' ? 'CC' : t,
+              )
+              const parts = isFactory
+                ? [...outputLabels, ...filteredTags]
+                : preset.devices && preset.devices.length > 0
+                  ? [...outputLabels, preset.devices.length > 1 ? `${preset.devices[0]} +${preset.devices.length - 1}` : preset.devices[0]]
+                  : outputLabels
+              return parts.length > 0 ? (
+                <p className="mt-0.5 truncate text-sm font-light text-text-muted">
+                  {parts.join(' · ')}
+                </p>
+              ) : null
+            })()}
+          </div>
         </div>
 
         <div className={DEVICE_TABLE_STATUS_CELL}>

@@ -696,6 +696,7 @@ function StyleguideDevicePageDemo() {
             arrangementChangeCount={1}
             updateCount={2}
             onUpdateQuray={() => setShowToast(true)}
+            onOpenSettings={() => undefined}
           />
           <DeviceStatusBlock
             status={{ usedMb: 2.1, totalMb: 8, firmwareVersion: '1.22' }}

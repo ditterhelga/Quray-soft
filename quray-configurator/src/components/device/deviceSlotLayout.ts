@@ -1,11 +1,11 @@
 export function deviceSlotRowClassName(isDragPlaceholder = false) {
-  return `group relative py-6 pr-6 transition-colors duration-[120ms] ${
+  return `group relative rounded-lg border border-border bg-bg-active py-6 pr-6 transition-colors duration-[120ms] ${
     isDragPlaceholder ? 'opacity-40' : ''
   }`.trim()
 }
 
 export function deviceSlotListRowsClassName() {
-  return 'flex flex-col divide-y divide-border'
+  return 'flex flex-col gap-2'
 }
 
 export function deviceSlotLeadingClassName() {

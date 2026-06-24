@@ -4,7 +4,7 @@ import {
   libraryToolbarRowClassName,
 } from '@/components/library/LibraryToolbar'
 import { tabGroupClassName } from '@/components/ui/Tab'
-import { ArrowClockwise } from '@phosphor-icons/react'
+import { ArrowClockwise, GearSix } from '@phosphor-icons/react'
 import {
   deviceStagedChangesListClassName,
   deviceToolbarTitleClassName,
@@ -18,6 +18,7 @@ type DeviceToolbarProps = {
   arrangementChangeCount: number
   updateCount: number
   onUpdateQuray: () => void
+  onOpenSettings: () => void
 }
 
 export function DeviceToolbar({
@@ -25,6 +26,7 @@ export function DeviceToolbar({
   arrangementChangeCount,
   updateCount,
   onUpdateQuray,
+  onOpenSettings,
 }: DeviceToolbarProps) {
   const stagedChangesParts = formatDeviceStagedChangesLabel(
     arrangementChangeCount,
@@ -35,7 +37,20 @@ export function DeviceToolbar({
     <div className={libraryToolbarClassName()}>
       <div className={libraryToolbarRowClassName()}>
         <nav className={tabGroupClassName()} aria-label="Device view">
-          <h1 className={deviceToolbarTitleClassName()}>My Quray</h1>
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col">
+              <h1 className={deviceToolbarTitleClassName()}>My Quray</h1>
+              <span className="text-xs font-light text-text-muted">Presets and sets stored on your device</span>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+              aria-label="Device settings"
+            >
+              <GearSix size={16} weight="regular" aria-hidden="true" />
+            </button>
+          </div>
         </nav>
 
         <div className={libraryToolbarActionsClassName()}>

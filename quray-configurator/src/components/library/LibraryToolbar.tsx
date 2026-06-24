@@ -12,7 +12,11 @@ type LibraryToolbarProps = {
 }
 
 export function libraryToolbarClassName() {
-  return 'px-8 pt-6'
+  return 'px-8 pt-8'
+}
+
+export function editorToolbarClassName() {
+  return 'px-8 pt-4'
 }
 
 export function libraryToolbarRowClassName() {

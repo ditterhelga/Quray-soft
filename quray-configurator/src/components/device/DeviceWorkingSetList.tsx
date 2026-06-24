@@ -21,7 +21,8 @@ import { useMemo, useState } from 'react'
 import { DevicePresetSlotRow } from '@/components/device/DevicePresetSlotRow'
 import { DeviceSectionHeader } from '@/components/device/DeviceSectionHeader'
 import { DeviceSetSlotRow } from '@/components/device/DeviceSetSlotRow'
-import { deviceSlotDragOverlayClassName, deviceSlotListRowsClassName } from '@/components/device/deviceSlotLayout'
+import { deviceSlotDragOverlayClassName, deviceSlotInnerRowSpacerClassName, deviceSlotListRowsClassName } from '@/components/device/deviceSlotLayout'
+import { DEVICE_TABLE_GRID, DEVICE_TABLE_STATUS_ACTIONS_SLOT } from '@/components/device/deviceTableLayout'
 import {
   libraryListBodyClassName,
 } from '@/components/library/libraryLayout'
@@ -299,7 +300,20 @@ export function DeviceWorkingSetList({
         </div>
       )}
 
-      <div className={`${libraryListBodyClassName()} ${bulkActive ? '' : 'mt-8'}`}>
+      {!bulkActive && (
+        <div className="pb-2 pt-8">
+          <div className={`${DEVICE_TABLE_GRID} pr-6 text-sm font-light text-text-muted`}>
+            <div className="flex items-center">
+              <span className={`shrink-0 ${deviceSlotInnerRowSpacerClassName()}`} aria-hidden="true" />
+              <span className="ml-3">Name</span>
+            </div>
+            <div className="flex justify-end pr-[4.75rem]">
+              <span>Status</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className={`${libraryListBodyClassName()} ${bulkActive ? '' : 'mt-2'}`}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

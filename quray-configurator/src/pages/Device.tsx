@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useDeviceContext } from '@/context/DeviceContext'
 import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
 import { DeviceToolbar } from '@/components/device/DeviceToolbar'
+import { DeviceSettingsModal } from '@/components/device/DeviceSettingsModal'
 import { DeviceWorkingSetList } from '@/components/device/DeviceWorkingSetList'
 import { Toast } from '@/components/ui/Toast'
 import {
@@ -58,6 +59,8 @@ export function Device() {
   const [removedSlotCount, setRemovedSlotCount] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  void settingsOpen
 
   useEffect(() => {
     if (isFreshMode) {
@@ -238,6 +241,7 @@ export function Device() {
             arrangementChangeCount={arrangementChangeCount}
             updateCount={needsSyncCount}
             onUpdateQuray={handleUpdateQuray}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
           <DeviceStatusBlock status={PLACEHOLDER_DEVICE_STATUS} />
         </div>
@@ -258,6 +262,12 @@ export function Device() {
           onBulkRemove={handleBulkRemove}
         />
       </div>
+
+      <DeviceSettingsModal
+        open={settingsOpen}
+        firmwareVersion={PLACEHOLDER_DEVICE_STATUS.firmwareVersion}
+        onClose={() => setSettingsOpen(false)}
+      />
 
       {toast && (
         <Toast
