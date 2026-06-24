@@ -378,7 +378,9 @@ export function Library({ mode = 'full' }: LibraryProps) {
   function handleSendPresetToQuray(presetId: string) {
     const preset = presets.find((entry) => entry.id === presetId)
     setToast({
-      message: preset ? `${preset.name} sent to Quray.` : 'Preset sent to Quray.',
+      message: 'Added to your Quray. →',
+      actionLabel: 'View Device page',
+      onAction: () => navigate('/device'),
       key: Date.now(),
     })
     sendPresetToDevice(presetId, preset ?? undefined)

@@ -5,7 +5,7 @@ import {
   UploadSimple,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FanCanvas } from '@/components/editor/FanCanvas'
 import { ZoneSettings } from '@/components/editor/ZoneSettings'
 import { createDefaultMapping } from '@/components/editor/zoneMappings'
@@ -16,7 +16,7 @@ import { useEditorZones } from '@/context/EditorZonesContext'
 import { useDeviceContext } from '@/context/DeviceContext'
 import { editorToolbarClassName } from '@/components/library/LibraryToolbar'
 import { libraryOutlinedButtonClassName } from '@/components/library/presetRowActions'
-import type { EditorZone, GesturePosition } from '@/types'
+import type { EditorZone, GesturePosition, Preset, PresetZone } from '@/types'
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -33,6 +33,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 export function Editor() {
   const { presetId } = useParams<{ presetId: string }>()
+  const navigate = useNavigate()
   const { sendPresetToDevice } = useDeviceContext()
   const location = useLocation()
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
@@ -53,6 +54,7 @@ export function Editor() {
     redo,
     canUndo,
     canRedo,
+    presetName,
     setPresetName,
   } = useEditorZones()
   const [drawMode, setDrawMode] = useState(false)
@@ -152,8 +154,33 @@ export function Editor() {
                       setToast({ message: 'No mappings assigned. Add at least one mapping before syncing.' })
                       return
                     }
-                    sendPresetToDevice(presetId ?? 'preset-empty')
-                    setToast({ message: 'Preset sent to Quray.' })
+                    const id = presetId ?? 'preset-empty'
+                    const presetZones: PresetZone[] = zones.map((zone) => ({
+                      id: zone.id,
+                      name: zone.name,
+                      color: zone.color,
+                      outputType: (zone.type ?? zone.mappings[0]?.type ?? 'Note') as PresetZone['outputType'],
+                      axis: zone.mappings[0]?.axis ?? 'Y',
+                      paramLabel: zone.mappings[0]?.type ?? 'Note',
+                    }))
+                    const outputTypes = [...new Set(zones.map((z) => z.type).filter(Boolean))] as Preset['outputTypes']
+                    const preset: Preset = {
+                      id,
+                      name: presetName,
+                      devices: [],
+                      outputTypes,
+                      zoneCount: zones.length,
+                      zones: presetZones,
+                      lastUpdated: new Date().toISOString().split('T')[0],
+                      syncStatus: 'not-synced',
+                      isFavourite: false,
+                    }
+                    sendPresetToDevice(id, preset)
+                    setToast({
+                      message: 'Added to your Quray.',
+                      actionLabel: 'View Device page',
+                      onAction: () => navigate('/device'),
+                    })
                   }}
                 >
                   <UploadSimple size={14} weight="regular" className="shrink-0" aria-hidden="true" />

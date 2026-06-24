@@ -5,7 +5,7 @@ export const DEVICE_TABLE_HEADER =
   `${DEVICE_TABLE_GRID} pr-6 pl-0 text-sm font-light text-text-muted`
 
 export const DEVICE_TABLE_STATUS_CELL =
-  'flex items-center justify-end gap-3'
+    'flex items-center justify-end gap-6'
 
 /** Fixed width for inline actions — keeps status chips aligned across row types. */
 export const DEVICE_TABLE_STATUS_ACTIONS_SLOT =

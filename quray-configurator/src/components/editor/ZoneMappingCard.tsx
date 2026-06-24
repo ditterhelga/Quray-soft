@@ -855,8 +855,7 @@ export function ZoneMappingCard({
                 </div>
               )}
               <div className={mappingCheckboxRowClassName}>
-                <button
-                  type="button"
+                <div
                   onClick={() => {
                     const isCurrentlyManual = (mapping.ccInputMode ?? 'device') === 'manual'
                     if (isCurrentlyManual) {
@@ -892,7 +891,7 @@ export function ZoneMappingCard({
                       <Check size={10} weight="bold" className="text-text-primary" />
                     )}
                   </span>
-                </button>
+                </div>
               </div>
 
               <div className={mappingDividerClassName} />
@@ -939,8 +938,7 @@ export function ZoneMappingCard({
                 </div>
               )}
               <div className={mappingCheckboxRowClassName}>
-                <button
-                  type="button"
+                <div
                   onClick={() =>
                     onUpdate({
                       singleValue: !mapping.singleValue,
@@ -961,7 +959,7 @@ export function ZoneMappingCard({
                       })
                     }
                   />
-                </button>
+                </div>
               </div>
             </div>
           )}
@@ -1061,8 +1059,7 @@ export function ZoneMappingCard({
                 </div>
               )}
               <div className={mappingCheckboxRowClassName}>
-                <button
-                  type="button"
+                <div
                   onClick={() =>
                     onUpdate({
                       singleValue: !mapping.singleValue,
@@ -1083,7 +1080,7 @@ export function ZoneMappingCard({
                       })
                     }
                   />
-                </button>
+                </div>
               </div>
             </div>
           )}

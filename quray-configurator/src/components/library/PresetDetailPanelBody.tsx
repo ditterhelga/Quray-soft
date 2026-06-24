@@ -79,16 +79,20 @@ export function PresetDetailPanelBody({
 
       <section className={presetDetailPanelSectionClassName()}>
         <dl className={presetDetailPanelMetadataGridClassName()}>
-          <dt className={presetDetailPanelMetadataLabelClassName()}>Status</dt>
-          <dd className={presetDetailPanelMetadataValueClassName()}>
-            <span className={presetDetailPanelStatusValueClassName()}>
-              <StatusIcon
-                className={`h-3.5 w-3.5 shrink-0 ${statusMeta.iconClassName}`}
-                aria-hidden="true"
-              />
-              {statusMeta.label}
-            </span>
-          </dd>
+          {!isExplore && (
+            <>
+              <dt className={presetDetailPanelMetadataLabelClassName()}>Status</dt>
+              <dd className={presetDetailPanelMetadataValueClassName()}>
+                <span className={presetDetailPanelStatusValueClassName()}>
+                  <StatusIcon
+                    className={`h-3.5 w-3.5 shrink-0 ${statusMeta.iconClassName}`}
+                    aria-hidden="true"
+                  />
+                  {statusMeta.label}
+                </span>
+              </dd>
+            </>
+          )}
           <dt className={presetDetailPanelMetadataLabelClassName()}>Output</dt>
           <dd className={presetDetailPanelMetadataValueClassName()}>
             {preset.outputTypes.map(formatOutputLabel).join(' · ')}

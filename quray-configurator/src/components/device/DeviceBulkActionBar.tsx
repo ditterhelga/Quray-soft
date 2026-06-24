@@ -1,3 +1,4 @@
+import { Trash } from '@phosphor-icons/react'
 import {
   bulkActionBarButtonGroupClassName,
   bulkActionBarClassName,
@@ -5,6 +6,7 @@ import {
   bulkActionBarCountClassName,
   bulkActionBarLinkClassName,
   bulkActionBarTextGroupClassName,
+  bulkActionBarSecondaryButtonClassName,
 } from '@/components/library/BulkActionBar'
 
 type DeviceBulkActionBarProps = {
@@ -47,8 +49,9 @@ export function DeviceBulkActionBar({
         <button
           type="button"
           onClick={onRemoveSelected}
-          className={deviceBulkRemoveButtonClassName()}
+          className={`${bulkActionBarSecondaryButtonClassName()} text-status-error hover:border-status-error`}
         >
+          <Trash size={16} weight="regular" aria-hidden="true" />
           Remove from device
         </button>
       </div>

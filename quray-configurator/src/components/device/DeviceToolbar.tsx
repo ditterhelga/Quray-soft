@@ -37,15 +37,12 @@ export function DeviceToolbar({
     <div className={libraryToolbarClassName()}>
       <div className={libraryToolbarRowClassName()}>
         <nav className={tabGroupClassName()} aria-label="Device view">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col">
-              <h1 className={deviceToolbarTitleClassName()}>My Quray</h1>
-              <span className="text-xs font-light text-text-muted">Presets and sets stored on your device</span>
-            </div>
+          <div className="flex items-baseline gap-2">
+            <h1 className={deviceToolbarTitleClassName()}>My Quray</h1>
             <button
               type="button"
               onClick={onOpenSettings}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-text-muted transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors duration-[120ms] hover:bg-bg-hover hover:text-text-primary"
               aria-label="Device settings"
             >
               <GearSix size={16} weight="regular" aria-hidden="true" />

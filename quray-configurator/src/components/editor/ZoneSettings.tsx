@@ -411,7 +411,7 @@ export function ZoneSettings({
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-sm font-light text-text-primary">No zone selected</p>
           <p className="max-w-[180px] text-xs font-light leading-relaxed text-text-muted">
-            Select a zone on the canvas to configure its output — Note, CC or CV mappings.
+            Select a zone on the canvas to configure its output — Note, CC, CV or CV note mappings.
           </p>
         </div>
         {onAddZone && (

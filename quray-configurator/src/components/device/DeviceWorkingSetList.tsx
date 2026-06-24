@@ -21,11 +21,12 @@ import { useMemo, useState } from 'react'
 import { DevicePresetSlotRow } from '@/components/device/DevicePresetSlotRow'
 import { DeviceSectionHeader } from '@/components/device/DeviceSectionHeader'
 import { DeviceSetSlotRow } from '@/components/device/DeviceSetSlotRow'
-import { deviceSlotDragOverlayClassName, deviceSlotInnerRowSpacerClassName, deviceSlotListRowsClassName } from '@/components/device/deviceSlotLayout'
-import { DEVICE_TABLE_GRID, DEVICE_TABLE_STATUS_ACTIONS_SLOT } from '@/components/device/deviceTableLayout'
+import { deviceSlotDragOverlayClassName, deviceSlotListRowsClassName } from '@/components/device/deviceSlotLayout'
+import { DEVICE_TABLE_GRID } from '@/components/device/deviceTableLayout'
 import {
   libraryListBodyClassName,
 } from '@/components/library/libraryLayout'
+import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox'
 import type { DeviceSlot, DeviceSyncStatus } from '@/data/deviceWorkingSet'
 import {
   getDevicePresetSyncStatus,
@@ -287,33 +288,39 @@ export function DeviceWorkingSetList({
 
   return (
     <>
-      {bulkActive && (
-        <div className="mt-8">
-          <DeviceSectionHeader
-            bulkActive={bulkActive}
-            selectedCount={selectedIds.size}
-            totalCount={slots.length}
-            onSelectAll={onSelectAll}
-            onClear={onClearSelection}
-            onRemoveSelected={onBulkRemove}
-          />
-        </div>
-      )}
-
-      {!bulkActive && (
-        <div className="pb-2 pt-8">
-          <div className={`${DEVICE_TABLE_GRID} pr-6 text-sm font-light text-text-muted`}>
-            <div className="flex items-center">
-              <span className={`shrink-0 ${deviceSlotInnerRowSpacerClassName()}`} aria-hidden="true" />
-              <span className="ml-3">Name</span>
-            </div>
-            <div className="flex justify-end pr-[4.75rem]">
-              <span>Status</span>
-            </div>
+      <div className="pb-2 pt-8">
+        {bulkActive && (
+          <div className="mb-3">
+            <DeviceSectionHeader
+              bulkActive={bulkActive}
+              selectedCount={selectedIds.size}
+              totalCount={slots.length}
+              onSelectAll={onSelectAll}
+              onClear={onClearSelection}
+              onRemoveSelected={onBulkRemove}
+            />
+          </div>
+        )}
+        <div className={`${DEVICE_TABLE_GRID} pr-6 text-sm font-light text-text-muted`}>
+          <div className="flex items-center pl-4">
+            <SelectionCheckbox
+              checked={slots.length > 0 && selectedIds.size === slots.length}
+              compact
+              onToggle={selectedIds.size === slots.length ? onClearSelection : onSelectAll}
+              ariaLabel={selectedIds.size === slots.length ? 'Deselect all' : 'Select all'}
+              className="shrink-0 self-center"
+            />
+            <div className="ml-3 w-4 shrink-0" aria-hidden="true" />
+            <div className="ml-3 w-10 shrink-0" aria-hidden="true" />
+            <span className="ml-3">Name</span>
+          </div>
+          <div className="flex items-center justify-end gap-6">
+            <span>Status</span>
+            <div className="w-[4.75rem] shrink-0" aria-hidden="true" />
           </div>
         </div>
-      )}
-      <div className={`${libraryListBodyClassName()} ${bulkActive ? '' : 'mt-2'}`}>
+      </div>
+      <div className={`${libraryListBodyClassName()} mt-2`}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
