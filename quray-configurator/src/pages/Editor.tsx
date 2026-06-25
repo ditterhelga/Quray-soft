@@ -36,7 +36,11 @@ export function Editor() {
   const { presetId } = useParams<{ presetId: string }>()
   const navigate = useNavigate()
   const { sendPresetToDevice } = useDeviceContext()
-  const { addRecentPreset } = usePresetsContext()
+  const {
+    setFreshPresets,
+    setFullPresets,
+    addRecentPreset,
+  } = usePresetsContext()
   const location = useLocation()
   const editorPreset = findEditorPreset(presetId ?? 'preset-empty')
   const {
@@ -159,7 +163,11 @@ export function Editor() {
                       setToast({ message: 'No mappings assigned. Add at least one mapping before syncing.' })
                       return
                     }
-                    const id = presetId ?? 'preset-empty'
+
+                    // Save preset to library before navigating away
+                    const savedId = (!presetId || presetId === 'preset-empty')
+                      ? `preset-${Date.now()}`
+                      : presetId
                     const presetZones: PresetZone[] = zones.map((zone) => ({
                       id: zone.id,
                       name: zone.name,
@@ -169,10 +177,11 @@ export function Editor() {
                       paramLabel: zone.mappings[0]?.type ?? 'Note',
                     }))
                     const outputTypes = [...new Set(zones.map((z) => z.type).filter(Boolean))] as Preset['outputTypes']
-                    const preset: Preset = {
-                      id,
+                    const savedPreset: Preset = {
+                      id: savedId,
                       name: presetName,
                       devices: [],
+                      tags: [],
                       outputTypes,
                       zoneCount: zones.length,
                       zones: presetZones,
@@ -180,7 +189,21 @@ export function Editor() {
                       syncStatus: 'not-synced',
                       isFavourite: false,
                     }
-                    sendPresetToDevice(id, preset)
+                    const isNew = !presetId || presetId === 'preset-empty' || presetId.startsWith('factory-')
+                    const updater = (current: Preset[]) => {
+                      const exists = current.some((p) => p.id === savedId)
+                      return exists
+                        ? current.map((p) => (p.id === savedId ? savedPreset : p))
+                        : [savedPreset, ...current]
+                    }
+                    if (isNew) {
+                      setFreshPresets(updater)
+                    } else {
+                      setFullPresets(updater)
+                    }
+                    addRecentPreset(savedId)
+
+                    sendPresetToDevice(savedId, savedPreset)
                     setToast({
                       message: 'Added to your Quray.',
                       actionLabel: 'View Device page',

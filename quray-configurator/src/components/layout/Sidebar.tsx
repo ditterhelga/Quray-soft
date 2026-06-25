@@ -601,7 +601,7 @@ export function Sidebar({
   const isFreshMode = location.pathname === '/' || searchParams.get('fresh') === '1'
   const navigate = useNavigate()
   const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave, presetName, setPresetName, renamePresetTrigger } = useEditorZones()
-  const { setFreshPresets, setFullPresets, recentPresetIds, freshPresets, fullPresets } = usePresetsContext()
+  const { setFreshPresets, setFullPresets, recentPresetIds, freshPresets, fullPresets, addRecentPreset } = usePresetsContext()
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
@@ -672,6 +672,7 @@ export function Sidebar({
       } else {
         setFullPresets(updater)
       }
+      addRecentPreset(savedId)
     }
     navigate('/')
   }
