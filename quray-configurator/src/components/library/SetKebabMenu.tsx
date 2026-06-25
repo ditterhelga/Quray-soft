@@ -31,11 +31,11 @@ type SetKebabMenuItem = {
 }
 
 const SET_KEBAB_MENU_ITEMS: SetKebabMenuItem[] = [
-  { id: 'rename', label: 'Rename', icon: TextAa },
-  { id: 'duplicate', label: 'Duplicate', icon: Copy },
   { id: 'add-presets', label: 'Add presets', icon: FolderPlus },
   { id: 'send-to-quray', label: 'Send to Quray', icon: UploadSimple },
   { id: 'export', label: 'Export', icon: DownloadSimple },
+  { id: 'duplicate', label: 'Duplicate', icon: Copy, dividerBefore: true },
+  { id: 'rename', label: 'Rename', icon: TextAa },
   { id: 'delete', label: 'Delete', icon: Trash, destructive: true, dividerBefore: true },
 ]
 

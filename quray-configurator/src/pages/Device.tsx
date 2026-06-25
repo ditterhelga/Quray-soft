@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useDeviceContext } from '@/context/DeviceContext'
+import { usePresetsContext } from '@/context/PresetsContext'
 import { DeviceStatusBlock } from '@/components/device/DeviceStatusBlock'
 import { DeviceToolbar } from '@/components/device/DeviceToolbar'
 import { DeviceSettingsModal } from '@/components/device/DeviceSettingsModal'
@@ -14,7 +15,6 @@ import {
 } from '@/data/deviceWorkingSet'
 import { FACTORY_PRESETS } from '@/data/factoryPresets'
 import { PRESETS } from '@/data/presets'
-import { SETS } from '@/data/sets'
 import { focusLibrarySet } from '@/utils/deviceNavigation'
 import {
   countDeviceSlotsNeedingSync,
@@ -61,6 +61,7 @@ export function Device() {
   const [toast, setToast] = useState<ToastState | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   void settingsOpen
+  const { fullSets, freshSets } = usePresetsContext()
 
   useEffect(() => {
     if (isFreshMode) {
@@ -83,9 +84,10 @@ export function Device() {
     }
   }, [isFreshMode, setSlots, setPresetSync, extraPresets])
 
+  const activeSets = isFreshMode ? freshSets : fullSets
   const setsById = useMemo(
-    () => new Map(SETS.map((set) => [set.id, set])),
-    [],
+    () => new Map(activeSets.map((set) => [set.id, set])),
+    [activeSets],
   )
   const presetsById = useMemo(() => {
     const base = new Map(PRESETS.map((preset) => [preset.id, preset]))
@@ -250,7 +252,7 @@ export function Device() {
 
         <DeviceWorkingSetList
           slots={slots}
-          sets={SETS}
+          sets={activeSets}
           presets={allPresets}
           presetSync={presetSync}
           selectedIds={selectedIds}

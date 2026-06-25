@@ -42,29 +42,6 @@ import { NavItem } from '@/components/layout/NavItem'
 const mockSyncStatus = 'not-synced' as 'synced' | 'not-synced'
 const mockAutosaveStatus = 'saved' as 'saving' | 'saved' | 'error'
 
-const RECENT_PRESETS = [
-  {
-    label: 'Today',
-    presets: [
-      'Subharmonic Drift',
-      'West Coast Buchla Gesture',
-      'Tape Stop Gesture',
-    ],
-  },
-  {
-    label: 'Yesterday',
-    presets: [
-      'Mutable Clouds Wash',
-      'Eurorack Clock Mult',
-      'Quad VCA Swell',
-    ],
-  },
-  {
-    label: 'Earlier',
-    presets: ['Acid Squelch Lane', 'Bipolar CV'],
-  },
-] as const
-
 const SCALES_LIST = [
   'Chromatic',
   'Major (Ionian)',
@@ -624,7 +601,7 @@ export function Sidebar({
   const isFreshMode = location.pathname === '/' || searchParams.get('fresh') === '1'
   const navigate = useNavigate()
   const { zones, selectedZoneId, setSelectedZoneId, setZones, openZoneContextMenu, presetScale, setPresetScale, presetRoot, setPresetRoot, presetOctave, setPresetOctave, presetName, setPresetName, renamePresetTrigger } = useEditorZones()
-  const { setFreshPresets, setFullPresets } = usePresetsContext()
+  const { setFreshPresets, setFullPresets, recentPresetIds, freshPresets, fullPresets } = usePresetsContext()
   const [editingName, setEditingName] = useState(false)
   const [colorPopoverOpen, setColorPopoverOpen] = useState(false)
   const [scalePopoverOpen, setScalePopoverOpen] = useState(false)
@@ -698,6 +675,10 @@ export function Sidebar({
     }
     navigate('/')
   }
+
+  const allPresetsById = new Map(
+    [...freshPresets, ...fullPresets].map((p) => [p.id, p]),
+  )
 
   return (
     <aside
@@ -1049,31 +1030,25 @@ export function Sidebar({
                 </h2>
 
                 <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-                  {!isFreshMode && (
-                    <div className="flex flex-col gap-6 pb-4">
-                      {RECENT_PRESETS.map((group) => (
-                        <div key={group.label}>
-                          <h3 className="pl-6 text-sm font-light text-text-muted">
-                            {group.label}
-                          </h3>
-                          <ul className="mt-4 flex w-full flex-col gap-3 px-3">
-                            {group.presets.map((name) => (
-                              <li key={name} className="w-full">
-                                <button
-                                  type="button"
-                                  className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
-                                  title={name}
-                                >
-                                  {name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {isFreshMode && (
+                  {recentPresetIds.length > 0 ? (
+                    <ul className="mt-2 flex w-full flex-col gap-1 px-3 pb-4">
+                      {recentPresetIds.map((id) => {
+                        const preset = allPresetsById.get(id)
+                        if (!preset) return null
+                        return (
+                          <li key={id} className="w-full">
+                            <button
+                              type="button"
+                              className="block w-full min-w-0 cursor-pointer truncate rounded-lg px-3 py-1.5 text-left text-sm font-light text-text-primary opacity-70 transition duration-[120ms] ease-in-out hover:bg-bg-active hover:opacity-100"
+                              title={preset.name}
+                            >
+                              {preset.name}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
                     <p className="px-6 py-3 text-sm font-light text-text-muted">No recent presets yet.</p>
                   )}
                 </div>
